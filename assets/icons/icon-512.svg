@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="bgGrad512" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#FFA07A" />
+      <stop offset="100%" stop-color="#FF6F61" />
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="110" fill="url(#bgGrad512)" />
+  <g transform="translate(64, 76)">
+    <!-- Food Bowl -->
+    <path d="M32 188 Q192 360 352 188 Z" fill="#FFFFFF" opacity="0.95" />
+    <!-- Bowl Base -->
+    <path d="M140 288 L244 288 L228 316 L156 316 Z" fill="#FFEBE9" />
+    <!-- Spoon -->
+    <path d="M294 54 C334 40 370 68 348 108 L240 228 L214 202 Z" fill="#FFF3E0" />
+    <!-- Food steam / bubbles -->
+    <circle cx="134" cy="108" r="18" fill="#FFF9C4" />
+    <circle cx="200" cy="76" r="24" fill="#FFF9C4" />
+    <circle cx="272" cy="114" r="16" fill="#FFF9C4" />
+    <!-- Ice Cube icon -->
+    <rect x="68" y="128" width="42" height="42" rx="10" fill="#B2EBF2" />
+    <path d="M78 149 L100 149 M89 138 L89 160" stroke="#0097A7" stroke-width="4" stroke-linecap="round" />
+  </g>
+</svg>

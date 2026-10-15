@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>이유식 다이어리</title>
+
+  <!-- PWA & Mobile Meta -->
+  <link rel="manifest" href="./manifest.webmanifest">
+  <meta name="theme-color" content="#FF6F61">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="이유식">
+  <link rel="apple-touch-icon" href="./assets/icons/icon-192.svg">
+
+  <!-- CSS Stylesheets -->
+  <link rel="stylesheet" href="./css/tokens.css">
+  <link rel="stylesheet" href="./css/app.css">
+</head>
+<body>
+  <div id="app">
+    <!-- Top Header Bar -->
+    <header class="app-header">
+      <div class="header-title-wrap">
+        <span class="header-logo">🍚</span>
+        <h1 class="header-title">이유식 다이어리</h1>
+      </div>
+      <div class="header-actions">
+        <span id="header-sync-status" class="header-status-badge">● 로컬 모드</span>
+      </div>
+    </header>
+
+    <!-- Main View Scroll Container -->
+    <main id="main-content" class="main-content">
+      <!-- Active view content renders here -->
+    </main>
+
+    <!-- Bottom Navigation Bar (4 tabs + center elevated plus) -->
+    <nav class="tab-bar">
+      <button type="button" id="tab-home" class="tab-item active">
+        <span class="tab-icon">🏠</span>
+        <span>홈</span>
+      </button>
+
+      <button type="button" id="tab-calendar" class="tab-item">
+        <span class="tab-icon">📅</span>
+        <span>달력</span>
+      </button>
+
+      <button type="button" id="tab-plus" class="tab-item-plus" aria-label="식단 기록 추가">
+        <span>＋</span>
+      </button>
+
+      <button type="button" id="tab-cubes" class="tab-item">
+        <span class="tab-icon">🧊</span>
+        <span>큐브</span>
+      </button>
+
+      <button type="button" id="tab-more" class="tab-item">
+        <span class="tab-icon">⚙️</span>
+        <span>더보기</span>
+      </button>
+    </nav>
+
+    <!-- Bottom Sheet Modal Container -->
+    <div id="sheet-backdrop" class="sheet-backdrop"></div>
+    <div id="sheet-container" class="sheet-container">
+      <div class="sheet-handle-bar"></div>
+      <div class="sheet-header">
+        <span id="sheet-title" class="sheet-title"></span>
+        <button type="button" id="sheet-close-btn" class="sheet-close-btn" aria-label="닫기">✕</button>
+      </div>
+      <div id="sheet-body" class="sheet-body"></div>
+    </div>
+
+    <!-- Toast Notification Container -->
+    <div id="toast-container" class="toast-container"></div>
+  </div>
+
+  <!-- Main ES Module Bootstrap -->
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>

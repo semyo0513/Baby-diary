@@ -1,0 +1,61 @@
+{
+  "exampleA": {
+    "name": "예시 A — 베이스(쌀미음)",
+    "today": "2026-10-15",
+    "stock": 5,
+    "rate": 1.0,
+    "eatenToday": 1.0,
+    "settings": {
+      "warn_stock": 2,
+      "due_stock": 1,
+      "lead_days": 0
+    },
+    "expected": {
+      "warn": "2026-10-18",
+      "due": "2026-10-19",
+      "empty": "2026-10-20"
+    }
+  },
+  "exampleB": {
+    "name": "예시 B — 토핑(애호박)",
+    "today": "2026-10-15",
+    "stock": 6,
+    "rate": 0.42857142857142855,
+    "eatenToday": 0,
+    "settings": {
+      "warn_stock": 2,
+      "due_stock": 1,
+      "lead_days": 0
+    },
+    "expected": {
+      "warn": "2026-10-24",
+      "due": "2026-10-26",
+      "empty": "2026-10-29"
+    }
+  },
+  "T1": {
+    "description": "시작일 10/9, 10/15 조회 시 이유식 7일차, 출생일 2026-04-24 입력 시 생후 175일차",
+    "birth_date": "2026-04-24",
+    "solid_start_date": "2026-10-09",
+    "target_date": "2026-10-15",
+    "count_inclusive": true,
+    "expected_baby_day": 175,
+    "expected_solid_day": 7
+  },
+  "T2": {
+    "description": "10/9 이전 날짜 이유식 일차 미표시",
+    "solid_start_date": "2026-10-09",
+    "target_date": "2026-10-08",
+    "expected_solid_day": null
+  },
+  "T6": {
+    "description": "토핑 6개, 7일 3큐브 소진 시 warn=오늘+9, due=오늘+11",
+    "today": "2026-10-15",
+    "stock": 6,
+    "recent_7days_eaten": 3,
+    "window_days": 7,
+    "expected_rate": 0.42857142857142855,
+    "expected_warn_offset": 9,
+    "expected_due_offset": 11
+  }
+}
