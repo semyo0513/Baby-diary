@@ -322,10 +322,23 @@ class Store {
       for (const it of m.items) {
         const ing = ingMap[it.ingredient_id];
         const ingName = ing ? ing.name : (it.name || '미등록');
-        const cubeG = ing && parseFloat(ing.cube_g) > 0 ? parseFloat(ing.cube_g) : 30;
-        const grams = parseFloat(it.grams) || 30;
-        const useCube = it.use_cube !== false;
-        const cubesUsed = useCube ? Math.round((grams / cubeG) * 100) / 100 : 0;
+        const cubeG = ing && parseFloat(ing.cube_g) > 0 ? parseFloat(ing.cube_g) : 20;
+        const grams = parseFloat(it.grams) || 20;
+        const useCube = it.use_cube !== false && String(it.use_cube).toUpperCase() !== 'FALSE';
+
+        // 큐브 차감 개수: 지정된 큐브 개수가 있으면 우선 사용 (예: 1개 분출)
+        let cubesUsed = 0;
+        if (useCube) {
+          if (it.cubes_used !== undefined && !isNaN(parseFloat(it.cubes_used))) {
+            cubesUsed = parseFloat(it.cubes_used);
+          } else {
+            cubesUsed = Math.round((grams / cubeG) * 100) / 100;
+          }
+        }
+
+        const preparedGrams = it.prepared_grams !== undefined && !isNaN(parseFloat(it.prepared_grams))
+          ? parseFloat(it.prepared_grams)
+          : (useCube ? Math.round(cubesUsed * cubeG) : grams);
 
         newItems.push({
           id: it.id || generateUuid(),
@@ -334,6 +347,7 @@ class Store {
           ingredient_id: it.ingredient_id,
           name: ingName,
           grams: grams,
+          prepared_grams: preparedGrams,
           use_cube: useCube ? 'TRUE' : 'FALSE',
           cubes_used: cubesUsed,
           created_at: nowIso,
@@ -364,12 +378,48 @@ class Store {
     // 4. 낙관적 UI 알림
     this.notify();
 
-    // 5. 서버 비동기 전송
+    // 5. 서버 비동기 전송 및 최신 재고 반영
     try {
-      await request('day.save', { date, meals, dayLog });
+      const res = await request('day.save', { date, meals, dayLog });
+      if (res && res.data && res.data.cubeSummary) {
+        this.state.cubeSummary = res.data.cubeSummary;
+        this.notify();
+      }
     } catch (err) {
       console.warn('[Store] 서버 저장 지연(오프라인 큐 적재):', err.message);
     }
+  }
+
+  /**
+   * 식단 항목 단건 삭제 및 재고 복구
+   */
+  async deleteMealItem(date, itemId) {
+    const allItems = this.getMealsForDate(date);
+    const target = allItems.find(m => m.id === itemId);
+    if (!target) return;
+
+    const remaining = allItems.filter(m => m.id !== itemId);
+    const grouped = {};
+    for (const r of remaining) {
+      const rNo = r.meal_no || 1;
+      if (!grouped[rNo]) grouped[rNo] = [];
+      grouped[rNo].push({
+        id: r.id,
+        ingredient_id: r.ingredient_id,
+        name: r.name,
+        grams: r.grams,
+        prepared_grams: r.prepared_grams,
+        cubes_used: r.cubes_used,
+        use_cube: String(r.use_cube).toUpperCase() !== 'FALSE'
+      });
+    }
+
+    const payloadMeals = Object.keys(grouped).map(mNo => ({
+      meal_no: parseInt(mNo, 10),
+      items: grouped[mNo]
+    }));
+
+    await this.saveDayMeals(date, payloadMeals, this.getDayLog(date));
   }
 
   /**

@@ -328,6 +328,18 @@ function setProperty(key, value) {
   PropertiesService.getScriptProperties().setProperty(key, value);
 }
 
+function normalizeDateStr(val) {
+  if (!val) return '';
+  if (val instanceof Date) {
+    return Utilities.formatDate(val, 'Asia/Seoul', 'yyyy-MM-dd');
+  }
+  const s = String(val).trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    return s.slice(0, 10);
+  }
+  return s;
+}
+
 function readTable(sheetName) {
   const sheet = getSheet(sheetName);
   const data = sheet.getDataRange().getValues();
@@ -344,9 +356,17 @@ function readTable(sheetName) {
     const obj = {};
     for (let c = 0; c < headers.length; c++) {
       let val = row[c];
-      // 작은따옴표로 이스케이프된 문자열 복원
-      if (typeof val === 'string' && val.startsWith("'") && /^[=+\-@]/.test(val.slice(1))) {
-        val = val.slice(1);
+      // Date 객체는 항상 YYYY-MM-DD 문자열로 정규화
+      if (val instanceof Date) {
+        val = Utilities.formatDate(val, 'Asia/Seoul', 'yyyy-MM-dd');
+      } else if (typeof val === 'string') {
+        // 작은따옴표로 이스케이프된 문자열 복원
+        if (val.startsWith("'") && /^[=+\-@]/.test(val.slice(1))) {
+          val = val.slice(1);
+        }
+        if (headers[c] === 'date' && /^\d{4}-\d{2}-\d{2}/.test(val)) {
+          val = val.slice(0, 10);
+        }
       }
       obj[headers[c]] = val;
     }
@@ -495,6 +515,12 @@ function serviceBootstrap(targetMonth) {
   };
 }
 
+function getSheetHeaders(sheetName) {
+  const sheet = getSheet(sheetName);
+  if (sheet.getLastRow() === 0) return [];
+  return sheet.getRange(1, 1, 1, sheet.getLastColumn()).getValues()[0].map(h => String(h).trim());
+}
+
 /**
  * 특정 날짜의 식단 원자적 저장 (F-02, F-07)
  * 기존 식단 소프트 삭제 -> 원장 eaten 소프트 삭제 -> 새 식단 저장 -> 새 eaten 원장 생성
@@ -506,17 +532,26 @@ function serviceDaySave(payload) {
 
   const mealSheet = getSheet(CONFIG.MEAL_ITEMS);
   const ledgerSheet = getSheet(CONFIG.CUBE_LEDGER);
-  const dayLogSheet = getSheet(CONFIG.DAY_LOG);
+
+  const mealHeaders = getSheetHeaders(CONFIG.MEAL_ITEMS);
+  const mealDeletedCol = mealHeaders.indexOf('deleted') + 1;
+  const mealUpdatedCol = mealHeaders.indexOf('updated_at') + 1;
+
+  const ledgerHeaders = getSheetHeaders(CONFIG.CUBE_LEDGER);
+  const ledgerDeletedCol = ledgerHeaders.indexOf('deleted') + 1;
 
   // 1. 기존 MealItems 중 해당 날짜 항목 삭제 처리
   const mealRows = readTable(CONFIG.MEAL_ITEMS);
   const existingMealIds = [];
   for (const m of mealRows) {
-    if (m.date === date && String(m.deleted).toUpperCase() !== 'TRUE') {
+    if (normalizeDateStr(m.date) === date && String(m.deleted).toUpperCase() !== 'TRUE') {
       existingMealIds.push(m.id);
-      // deleted 열(11번째) 업데이트
-      updateCell(CONFIG.MEAL_ITEMS, m.__rowIndex, 11, 'TRUE');
-      updateCell(CONFIG.MEAL_ITEMS, m.__rowIndex, 10, new Date().toISOString());
+      if (mealDeletedCol > 0) {
+        updateCell(CONFIG.MEAL_ITEMS, m.__rowIndex, mealDeletedCol, 'TRUE');
+      }
+      if (mealUpdatedCol > 0) {
+        updateCell(CONFIG.MEAL_ITEMS, m.__rowIndex, mealUpdatedCol, new Date().toISOString());
+      }
     }
   }
 
@@ -524,9 +559,10 @@ function serviceDaySave(payload) {
   const ledgerRows = readTable(CONFIG.CUBE_LEDGER);
   for (const l of ledgerRows) {
     if (String(l.deleted).toUpperCase() !== 'TRUE' && l.type === 'eaten') {
-      if (l.date === date || (l.ref_id && existingMealIds.includes(l.ref_id))) {
-        // deleted 열(9번째) 업데이트
-        updateCell(CONFIG.CUBE_LEDGER, l.__rowIndex, 9, 'TRUE');
+      if (normalizeDateStr(l.date) === date || (l.ref_id && existingMealIds.includes(l.ref_id))) {
+        if (ledgerDeletedCol > 0) {
+          updateCell(CONFIG.CUBE_LEDGER, l.__rowIndex, ledgerDeletedCol, 'TRUE');
+        }
       }
     }
   }
@@ -539,9 +575,22 @@ function serviceDaySave(payload) {
   }
 
   // 4. 새 식단 항목 생성 및 CubeLedger eaten 생성
+  // mealHeaders에 prepared_grams가 없다면 자동으로 컬럼 추가
+  if (mealHeaders.length > 0 && mealHeaders.indexOf('prepared_grams') === -1) {
+    const useCubeIdx = mealHeaders.indexOf('use_cube');
+    if (useCubeIdx !== -1) {
+      mealSheet.insertColumnBefore(useCubeIdx + 1);
+      mealSheet.getRange(1, useCubeIdx + 1).setValue('prepared_grams').setFontWeight('bold');
+      mealHeaders.splice(useCubeIdx, 0, 'prepared_grams');
+    } else {
+      mealSheet.getRange(1, mealHeaders.length + 1).setValue('prepared_grams').setFontWeight('bold');
+      mealHeaders.push('prepared_grams');
+    }
+  }
+
   const nowIso = new Date().toISOString();
-  const mealHeaders = ['id', 'date', 'meal_no', 'ingredient_id', 'name', 'grams', 'use_cube', 'cubes_used', 'created_at', 'updated_at', 'deleted'];
-  const ledgerHeaders = ['id', 'ts', 'date', 'ingredient_id', 'type', 'delta', 'ref_id', 'memo', 'deleted'];
+  const targetMealHeaders = mealHeaders.length > 0 ? mealHeaders : ['id', 'date', 'meal_no', 'ingredient_id', 'name', 'grams', 'prepared_grams', 'use_cube', 'cubes_used', 'created_at', 'updated_at', 'deleted'];
+  const targetLedgerHeaders = ledgerHeaders.length > 0 ? ledgerHeaders : ['id', 'ts', 'date', 'ingredient_id', 'type', 'delta', 'ref_id', 'memo', 'deleted'];
 
   const newMealRows = [];
   const newLedgerRows = [];
@@ -555,11 +604,25 @@ function serviceDaySave(payload) {
       const ing = ingMap[ingId];
       const ingName = ing ? ing.name : (item.name || '미등록');
       const grams = validateGrams(item.grams);
-      const useCube = item.use_cube !== false; // 기본 true
+      const useCube = item.use_cube !== false && String(item.use_cube).toUpperCase() !== 'FALSE';
 
-      const cubeG = ing && parseFloat(ing.cube_g) > 0 ? parseFloat(ing.cube_g) : 30;
-      const cubesUsed = useCube ? Math.round((grams / cubeG) * 100) / 100 : 0;
-      const mealItemId = Utilities.getUuid();
+      const cubeG = ing && parseFloat(ing.cube_g) > 0 ? parseFloat(ing.cube_g) : 20;
+
+      // 큐브 차감 개수: 사용자 지정값 우선, 없으면 grams / cubeG
+      let cubesUsed = 0;
+      if (useCube) {
+        if (item.cubes_used !== undefined && !isNaN(parseFloat(item.cubes_used))) {
+          cubesUsed = parseFloat(item.cubes_used);
+        } else {
+          cubesUsed = Math.round((grams / cubeG) * 100) / 100;
+        }
+      }
+
+      const preparedGrams = item.prepared_grams !== undefined && !isNaN(parseFloat(item.prepared_grams))
+        ? parseFloat(item.prepared_grams)
+        : (useCube ? Math.round(cubesUsed * cubeG) : grams);
+
+      const mealItemId = item.id || Utilities.getUuid();
 
       newMealRows.push({
         id: mealItemId,
@@ -568,6 +631,7 @@ function serviceDaySave(payload) {
         ingredient_id: ingId,
         name: ingName,
         grams: grams,
+        prepared_grams: preparedGrams,
         use_cube: useCube ? 'TRUE' : 'FALSE',
         cubes_used: cubesUsed,
         created_at: nowIso,
@@ -577,6 +641,10 @@ function serviceDaySave(payload) {
 
       // 큐브 차감 원장 기록
       if (useCube && cubesUsed > 0) {
+        const memoText = preparedGrams !== grams
+          ? `${mealNo}끼 ${ingName} 분출 ${preparedGrams}g 중 ${grams}g 섭취 (${cubesUsed}큐브)`
+          : `${mealNo}끼 ${ingName} ${grams}g 섭취 (${cubesUsed}큐브)`;
+
         newLedgerRows.push({
           id: Utilities.getUuid(),
           ts: nowIso,
@@ -585,20 +653,20 @@ function serviceDaySave(payload) {
           type: 'eaten',
           delta: -cubesUsed,
           ref_id: mealItemId,
-          memo: `${mealNo}끼 ${ingName} ${grams}g 섭취`,
+          memo: memoText,
           deleted: 'FALSE'
         });
       }
     }
   }
 
-  appendRows(CONFIG.MEAL_ITEMS, mealHeaders, newMealRows);
-  appendRows(CONFIG.CUBE_LEDGER, ledgerHeaders, newLedgerRows);
+  appendRows(CONFIG.MEAL_ITEMS, targetMealHeaders, newMealRows);
+  appendRows(CONFIG.CUBE_LEDGER, targetLedgerHeaders, newLedgerRows);
 
   // 5. DayLog 업서트
   if (dayLog) {
     const dlRows = readTable(CONFIG.DAY_LOG);
-    const existingDl = dlRows.find(dl => dl.date === date);
+    const existingDl = dlRows.find(dl => normalizeDateStr(dl.date) === date);
     const tagsStr = Array.isArray(dayLog.tags) ? dayLog.tags.join(',') : (dayLog.tags || '');
 
     if (existingDl) {
@@ -617,10 +685,15 @@ function serviceDaySave(payload) {
     }
   }
 
+  // 6. 최신 재고 및 식단 상태 반환
+  const bootData = serviceBootstrap(date.slice(0, 7));
+
   return {
     success: true,
     date: date,
-    mealCount: newMealRows.length
+    mealCount: newMealRows.length,
+    cubeSummary: bootData.cubeSummary,
+    items: bootData.items
   };
 }
 
@@ -966,7 +1039,7 @@ function setup() {
   // 3. MealItems 시트
   const mSheet = getSheet(CONFIG.SHEETS.MEAL_ITEMS);
   if (mSheet.getLastRow() === 0) {
-    const headers = ['id', 'date', 'meal_no', 'ingredient_id', 'name', 'grams', 'use_cube', 'cubes_used', 'created_at', 'updated_at', 'deleted'];
+    const headers = ['id', 'date', 'meal_no', 'ingredient_id', 'name', 'grams', 'prepared_grams', 'use_cube', 'cubes_used', 'created_at', 'updated_at', 'deleted'];
     mSheet.appendRow(headers);
     mSheet.getRange(1, 1, 1, headers.length).setFontWeight('bold').setBackground('#EFEBE9');
     // 날짜 열(2번째) 일반 텍스트 서식 지정

@@ -32,12 +32,29 @@ function initApp() {
   const tabPlus = document.getElementById('tab-plus');
   const tabCubes = document.getElementById('tab-cubes');
   const tabMore = document.getElementById('tab-more');
+  const btnSync = document.getElementById('btn-sync');
 
   if (tabHome) tabHome.onclick = () => store.setTab('home');
   if (tabCal) tabCal.onclick = () => store.setTab('calendar');
   if (tabPlus) tabPlus.onclick = () => openEntrySheet();
   if (tabCubes) tabCubes.onclick = () => store.setTab('cubes');
   if (tabMore) tabMore.onclick = () => store.setTab('more');
+
+  if (btnSync) {
+    btnSync.onclick = async () => {
+      btnSync.classList.add('spinning');
+      showToast('구글 드라이브와 동기화 중...', 'info', 1500);
+      try {
+        await flushOutbox();
+        await store.refreshData();
+        showToast('구글 드라이브 동기화 완료!', 'success');
+      } catch (err) {
+        showToast('동기화 실패: ' + err.message, 'error');
+      } finally {
+        btnSync.classList.remove('spinning');
+      }
+    };
+  }
 
   // 스토어 변경 구독
   store.subscribe(state => {

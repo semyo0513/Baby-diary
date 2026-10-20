@@ -89,6 +89,68 @@ html, body {
   gap: 8px;
 }
 
+.btn-sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-main);
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+.btn-sync:active {
+  background-color: var(--bg-sub);
+  transform: scale(0.96);
+}
+.btn-sync.spinning .sync-icon {
+  display: inline-block;
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Home Hero Banner */
+.home-hero-banner {
+  background: linear-gradient(135deg, #FFEBE9 0%, #FFF3E0 100%);
+  border: 1px solid #FFCDD2;
+  padding: 16px 18px;
+  border-radius: var(--radius-lg);
+  margin-bottom: 14px;
+}
+.home-hero-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #D32F2F;
+  margin-bottom: 4px;
+  letter-spacing: -0.02em;
+}
+.home-hero-sub {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #1A202C !important;
+  line-height: 1.45;
+}
+
+@media (prefers-color-scheme: dark) {
+  .home-hero-banner {
+    background: linear-gradient(135deg, #2D1A19 0%, #2A2015 100%);
+    border-color: #5C2D2A;
+  }
+  .home-hero-title {
+    color: #FF8A80;
+  }
+  .home-hero-sub {
+    color: #FFFFFF !important;
+  }
+}
+
 .btn-icon {
   width: 36px;
   height: 36px;

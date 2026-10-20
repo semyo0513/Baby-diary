@@ -30,22 +30,14 @@ export function renderHomeView(container) {
 
   // 1. 상단 아기 정보 배너
   const banner = document.createElement('div');
-  banner.className = 'card';
-  banner.style.background = 'linear-gradient(135deg, #FFF5F2, #FFFDFB)';
-  banner.style.border = '1px solid var(--primary-border)';
-  banner.style.padding = '18px 16px';
+  banner.className = 'card home-hero-banner';
 
   const babyTitle = document.createElement('div');
-  babyTitle.style.fontSize = '1.25rem';
-  babyTitle.style.fontWeight = '800';
-  babyTitle.style.color = 'var(--primary)';
-  babyTitle.style.marginBottom = '4px';
+  babyTitle.className = 'home-hero-title';
   babyTitle.textContent = `${settings.baby_name || '이은'}의 이유식 일기 🍚`;
 
   const dateSub = document.createElement('div');
-  dateSub.style.fontSize = '0.95rem';
-  dateSub.style.fontWeight = '600';
-  dateSub.style.color = 'var(--text-main)';
+  dateSub.className = 'home-hero-sub';
   dateSub.textContent = fullHeader;
 
   banner.appendChild(babyTitle);
@@ -195,11 +187,17 @@ export function renderHomeView(container) {
       row.style.display = 'flex';
       row.style.alignItems = 'center';
       row.style.justifyContent = 'space-between';
+      row.style.padding = '6px 0';
+      row.style.borderBottom = '1px solid var(--border-light)';
 
       const left = document.createElement('div');
       left.style.display = 'flex';
       left.style.alignItems = 'center';
       left.style.gap = '8px';
+      left.style.cursor = 'pointer';
+      left.onclick = () => {
+        openEntrySheet(today, m.meal_no || 1, m);
+      };
 
       const dot = document.createElement('span');
       dot.className = 'chip-dot';
@@ -210,14 +208,64 @@ export function renderHomeView(container) {
       name.textContent = `${m.meal_no || 1}끼 ${m.name}`;
 
       const grams = document.createElement('span');
-      grams.style.fontSize = '0.88rem';
+      grams.style.fontSize = '0.85rem';
       grams.style.color = 'var(--text-muted)';
-      grams.textContent = `${m.grams}g`;
+      const isCube = String(m.use_cube).toUpperCase() !== 'FALSE';
+      let infoStr = `${m.grams}g`;
+      if (isCube) {
+        if (m.prepared_grams && parseFloat(m.prepared_grams) !== parseFloat(m.grams)) {
+          infoStr += ` (분출 ${m.prepared_grams}g / ${m.cubes_used}큐브)`;
+        } else {
+          infoStr += ` (${m.cubes_used || 1}큐브)`;
+        }
+      }
+      grams.textContent = infoStr;
 
       left.appendChild(dot);
       left.appendChild(name);
       left.appendChild(grams);
+
+      // 수정 및 삭제 액션 버튼
+      const right = document.createElement('div');
+      right.style.display = 'flex';
+      right.style.alignItems = 'center';
+      right.style.gap = '6px';
+
+      const editBtn = document.createElement('button');
+      editBtn.type = 'button';
+      editBtn.className = 'btn btn-outline btn-sm';
+      editBtn.style.padding = '2px 8px';
+      editBtn.style.fontSize = '0.75rem';
+      editBtn.style.minHeight = '26px';
+      editBtn.textContent = '수정';
+      editBtn.onclick = (e) => {
+        e.stopPropagation();
+        openEntrySheet(today, m.meal_no || 1, m);
+      };
+
+      const delBtn = document.createElement('button');
+      delBtn.type = 'button';
+      delBtn.style.border = 'none';
+      delBtn.style.background = 'transparent';
+      delBtn.style.color = 'var(--urgent-red)';
+      delBtn.style.cursor = 'pointer';
+      delBtn.style.fontSize = '1.2rem';
+      delBtn.style.padding = '0 4px';
+      delBtn.textContent = '×';
+      delBtn.title = '삭제';
+      delBtn.onclick = async (e) => {
+        e.stopPropagation();
+        if (confirm(`${m.name} 기록을 삭제하시겠습니까? (차감된 큐브 재고는 복구됩니다)`)) {
+          await store.deleteMealItem(today, m.id);
+          showToast(`${m.name} 삭제 및 재고 복구 완료`, 'info');
+        }
+      };
+
+      right.appendChild(editBtn);
+      right.appendChild(delBtn);
+
       row.appendChild(left);
+      row.appendChild(right);
       mealList.appendChild(row);
     });
 

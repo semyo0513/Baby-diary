@@ -108,51 +108,61 @@ export function openDaySheet(dateStr) {
         const gramsTxt = document.createElement('span');
         gramsTxt.style.color = 'var(--text-muted)';
         gramsTxt.style.fontSize = '0.85rem';
-        const cubesStr = String(it.use_cube).toUpperCase() !== 'FALSE' ? ` (${it.cubes_used}큐브)` : ' (직접조리)';
-        gramsTxt.textContent = `${it.grams}g${cubesStr}`;
+        const isCube = String(it.use_cube).toUpperCase() !== 'FALSE';
+        let infoStr = `${it.grams}g`;
+        if (isCube) {
+          if (it.prepared_grams && parseFloat(it.prepared_grams) !== parseFloat(it.grams)) {
+            infoStr += ` (분출 ${it.prepared_grams}g / ${it.cubes_used}큐브)`;
+          } else {
+            infoStr += ` (${it.cubes_used || 1}큐브)`;
+          }
+        }
+        gramsTxt.textContent = infoStr;
 
         left.appendChild(dot);
         left.appendChild(nameTxt);
         left.appendChild(gramsTxt);
 
-        // 삭제 버튼
+        // 수정 및 삭제 액션 버튼
+        const right = document.createElement('div');
+        right.style.display = 'flex';
+        right.style.alignItems = 'center';
+        right.style.gap = '6px';
+
+        const editBtn = document.createElement('button');
+        editBtn.type = 'button';
+        editBtn.className = 'btn btn-outline btn-sm';
+        editBtn.style.padding = '2px 8px';
+        editBtn.style.fontSize = '0.75rem';
+        editBtn.style.minHeight = '26px';
+        editBtn.textContent = '수정';
+        editBtn.onclick = () => {
+          openEntrySheet(dateStr, no, it);
+        };
+
         const delBtn = document.createElement('button');
         delBtn.type = 'button';
         delBtn.style.border = 'none';
         delBtn.style.background = 'transparent';
         delBtn.style.color = 'var(--urgent-red)';
         delBtn.style.cursor = 'pointer';
-        delBtn.style.fontSize = '1.1rem';
+        delBtn.style.fontSize = '1.2rem';
+        delBtn.style.padding = '0 4px';
         delBtn.textContent = '×';
+        delBtn.title = '삭제';
         delBtn.onclick = async () => {
           if (confirm(`${it.name} 기록을 삭제하시겠습니까? (차감된 재고는 자동 복구됩니다)`)) {
-            const allItems = store.getMealsForDate(dateStr);
-            const remaining = allItems.filter(m => m.id !== it.id);
-
-            const newGrouped = {};
-            for (const r of remaining) {
-              const rNo = r.meal_no || 1;
-              if (!newGrouped[rNo]) newGrouped[rNo] = [];
-              newGrouped[rNo].push(r);
-            }
-            const payloadMeals = Object.keys(newGrouped).map(mNo => ({
-              meal_no: parseInt(mNo, 10),
-              items: newGrouped[mNo].map(ri => ({
-                ingredient_id: ri.ingredient_id,
-                name: ri.name,
-                grams: ri.grams,
-                use_cube: String(ri.use_cube).toUpperCase() !== 'FALSE'
-              }))
-            }));
-
-            await store.saveDayMeals(dateStr, payloadMeals, store.getDayLog(dateStr));
+            await store.deleteMealItem(dateStr, it.id);
             showToast(`${it.name} 삭제 및 재고 복구 완료`, 'info');
             renderMealItems();
           }
         };
 
+        right.appendChild(editBtn);
+        right.appendChild(delBtn);
+
         row.appendChild(left);
-        row.appendChild(delBtn);
+        row.appendChild(right);
         itemList.appendChild(row);
       });
 
