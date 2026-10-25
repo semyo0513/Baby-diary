@@ -419,6 +419,8 @@ function serviceBootstrap(targetMonth) {
   for (const r of settingsRows) {
     if (r.key) settings[r.key] = r.value;
   }
+  settings.pin_editor = settings.pin_editor || CONFIG.DEFAULT_PINS.EDITOR;
+  settings.pin_viewer = settings.pin_viewer || CONFIG.DEFAULT_PINS.VIEWER;
 
   // Ingredients (활성 재료)
   const ingRows = readTable(CONFIG.SHEETS.INGREDIENTS);
@@ -916,6 +918,20 @@ function serviceSettingsSave(payload) {
       updateCell(CONFIG.SHEETS.SETTINGS, settingMap[key].__rowIndex, 2, val);
     } else {
       appendRow(CONFIG.SHEETS.SETTINGS, ['key', 'value'], { key: key, value: val });
+    }
+  }
+
+  // PIN 번호 변경 시 해시값 동기화
+  if (payload.pin_editor) {
+    const rawEd = String(payload.pin_editor).trim();
+    if (rawEd) {
+      setProperty('PIN_EDITOR_HASH', hashPin(rawEd));
+    }
+  }
+  if (payload.pin_viewer) {
+    const rawVi = String(payload.pin_viewer).trim();
+    if (rawVi) {
+      setProperty('PIN_VIEWER_HASH', hashPin(rawVi));
     }
   }
 

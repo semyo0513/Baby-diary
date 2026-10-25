@@ -183,7 +183,11 @@ function renderGridView(container, year, month, today, settings, isInclusive, wa
       openDaySheet(cell.date);
     };
 
-    // 1) 셀 상단: 일자 + 아이콘(🧊, 🍳, 🆕, 🎉)
+    // 해당 일자 식단 및 섭취량 계산
+    const dayMeals = store.getMealsForDate(cell.date);
+    const dayTotalEaten = dayMeals.reduce((acc, m) => acc + (parseFloat(m.grams) || 0), 0);
+
+    // 1) 셀 상단: 일자 + 그날 먹은 량(g) + 아이콘(🧊, 🍳, 🆕, 🎉)
     const cellHeader = document.createElement('div');
     cellHeader.className = 'cal-cell-header';
 
@@ -191,6 +195,15 @@ function renderGridView(container, year, month, today, settings, isInclusive, wa
     dayNum.className = 'cal-day-num';
     dayNum.textContent = String(cell.day);
     cellHeader.appendChild(dayNum);
+
+    // 달력 상단에 오늘/그날 먹은 양(g) 표시
+    if (dayTotalEaten > 0) {
+      const eatenTop = document.createElement('span');
+      eatenTop.className = 'cal-eaten-top';
+      eatenTop.textContent = `${dayTotalEaten}g`;
+      eatenTop.title = `총 섭취량: ${dayTotalEaten}g`;
+      cellHeader.appendChild(eatenTop);
+    }
 
     const iconsWrap = document.createElement('div');
     iconsWrap.className = 'cal-icons';
@@ -225,8 +238,7 @@ function renderGridView(container, year, month, today, settings, isInclusive, wa
     subtext.textContent = formatCellSubtext(cell.date, settings.birth_date, settings.solid_start_date, isInclusive);
     cellEl.appendChild(subtext);
 
-    // 3) 식단 칩 (최대 2개 표시 + 추가분)
-    const dayMeals = store.getMealsForDate(cell.date);
+    // 3) 하단 식단 큐브 칩 (최대 2개 표시 + 추가분)
     if (dayMeals.length > 0) {
       const chipContainer = document.createElement('div');
       chipContainer.className = 'cal-cell-chips';
@@ -310,6 +322,11 @@ function renderListView(container, year, month, settings, isInclusive, warnDates
     const badges = document.createElement('div');
     badges.style.display = 'flex';
     badges.style.gap = '4px';
+
+    const dayEatenTotal = dayMeals.reduce((acc, m) => acc + (parseFloat(m.grams) || 0), 0);
+    if (dayEatenTotal > 0) {
+      badges.appendChild(createBadge(`🍽️ ${dayEatenTotal}g`, 'var(--primary-light)', 'var(--primary)'));
+    }
     if (isWarn) badges.appendChild(createBadge('🧊 제작 권장', 'var(--accent-ice-light)', '#0288D1'));
     if (isMade) badges.appendChild(createBadge('🍳 제작', 'var(--accent-gold-light)', '#F57C00'));
 

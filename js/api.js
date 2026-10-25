@@ -140,9 +140,15 @@ export async function flushOutbox() {
  * PIN 로그인 호출
  */
 export async function loginWithPin(pin) {
-  const res = await request('auth.login', { pin: pin });
+  const cleanPin = String(pin).trim();
+  const res = await request('auth.login', { pin: cleanPin });
   if (res.data && res.data.token) {
     setAuth(res.data.token, res.data.role);
+    if (res.data.role === 'editor') {
+      localStorage.setItem('baby_food_editor_pin', cleanPin);
+    } else {
+      localStorage.setItem('baby_food_viewer_pin', cleanPin);
+    }
   }
   return res.data;
 }

@@ -73,11 +73,16 @@ export function openDaySheet(dateStr) {
       mealCard.style.padding = '12px 14px';
       mealCard.style.marginBottom = '10px';
 
+      const mealEatenTotal = grouped[no].reduce((acc, it) => acc + (parseFloat(it.grams) || 0), 0);
       const cardHead = document.createElement('div');
-      cardHead.style.fontWeight = '700';
-      cardHead.style.fontSize = '0.92rem';
+      cardHead.style.display = 'flex';
+      cardHead.style.alignItems = 'center';
+      cardHead.style.justifyContent = 'space-between';
       cardHead.style.marginBottom = '8px';
-      cardHead.textContent = `🍚 ${no}번째 끼니`;
+      cardHead.innerHTML = `
+        <span style="font-weight:700; font-size:0.92rem;">🍚 ${no}번째 끼니</span>
+        <span style="font-size:0.85rem; font-weight:800; color:var(--primary);">실제 섭취 ${mealEatenTotal}g</span>
+      `;
       mealCard.appendChild(cardHead);
 
       const itemList = document.createElement('div');
@@ -91,37 +96,66 @@ export function openDaySheet(dateStr) {
         row.style.display = 'flex';
         row.style.alignItems = 'center';
         row.style.justifyContent = 'space-between';
+        row.style.padding = '4px 0';
+        row.style.borderBottom = '1px solid var(--border-light)';
 
         const left = document.createElement('div');
         left.style.display = 'flex';
         left.style.alignItems = 'center';
-        left.style.gap = '8px';
+        left.style.gap = '10px';
 
         const dot = document.createElement('span');
         dot.className = 'chip-dot';
         dot.style.backgroundColor = ing ? ing.color : '#4DB6AC';
+        dot.style.width = '10px';
+        dot.style.height = '10px';
+
+        const infoCol = document.createElement('div');
+        infoCol.style.display = 'flex';
+        infoCol.style.flexDirection = 'column';
+        infoCol.style.gap = '2px';
+
+        const nameRow = document.createElement('div');
+        nameRow.style.display = 'flex';
+        nameRow.style.alignItems = 'center';
+        nameRow.style.gap = '8px';
 
         const nameTxt = document.createElement('span');
-        nameTxt.style.fontWeight = '600';
+        nameTxt.style.fontWeight = '700';
+        nameTxt.style.fontSize = '0.92rem';
         nameTxt.textContent = it.name;
 
-        const gramsTxt = document.createElement('span');
-        gramsTxt.style.color = 'var(--text-muted)';
-        gramsTxt.style.fontSize = '0.85rem';
+        const eatenSpan = document.createElement('span');
+        eatenSpan.style.fontWeight = '800';
+        eatenSpan.style.fontSize = '0.92rem';
+        eatenSpan.style.color = 'var(--primary)';
+        eatenSpan.textContent = `실제 섭취 ${it.grams}g`;
+
+        nameRow.appendChild(nameTxt);
+        nameRow.appendChild(eatenSpan);
+        infoCol.appendChild(nameRow);
+
+        const subInfo = document.createElement('div');
+        subInfo.style.fontSize = '0.78rem';
+        subInfo.style.color = 'var(--text-muted)';
         const isCube = String(it.use_cube).toUpperCase() !== 'FALSE';
-        let infoStr = `${it.grams}g`;
         if (isCube) {
-          if (it.prepared_grams && parseFloat(it.prepared_grams) !== parseFloat(it.grams)) {
-            infoStr += ` (분출 ${it.prepared_grams}g / ${it.cubes_used}큐브)`;
+          const prep = it.prepared_grams !== undefined ? parseFloat(it.prepared_grams) : parseFloat(it.grams);
+          const actual = parseFloat(it.grams);
+          const cubes = it.cubes_used || 1;
+          if (prep > actual) {
+            subInfo.innerHTML = `🧊 분출 ${prep}g (${cubes}큐브) 중 <strong>${prep - actual}g 남김</strong>`;
+            subInfo.style.color = '#E65100';
           } else {
-            infoStr += ` (${it.cubes_used || 1}큐브)`;
+            subInfo.innerHTML = `🧊 분출 ${prep}g (${cubes}큐브) 완밥`;
           }
+        } else {
+          subInfo.textContent = '🍳 직접 조리 / 생재료';
         }
-        gramsTxt.textContent = infoStr;
+        infoCol.appendChild(subInfo);
 
         left.appendChild(dot);
-        left.appendChild(nameTxt);
-        left.appendChild(gramsTxt);
+        left.appendChild(infoCol);
 
         // 수정 및 삭제 액션 버튼
         const right = document.createElement('div');

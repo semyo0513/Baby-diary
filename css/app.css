@@ -486,6 +486,17 @@ html, body {
   border-radius: 50%;
 }
 
+.cal-eaten-top {
+  font-size: 0.62rem;
+  font-weight: 700;
+  color: var(--primary);
+  background-color: var(--primary-light);
+  padding: 1px 3px;
+  border-radius: 4px;
+  line-height: 1.1;
+  white-space: nowrap;
+}
+
 .cal-cell.is-today .cal-day-num {
   background-color: var(--primary);
   color: #FFFFFF;
@@ -757,3 +768,196 @@ html, body {
   outline: none;
   border-color: var(--primary);
 }
+
+/* ==========================================================================
+   Multi-Cube Meal Recording Basket
+   ========================================================================== */
+.multi-cube-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.multi-cube-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.multi-cube-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.multi-cube-card-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.multi-cube-del-btn {
+  background: transparent;
+  border: none;
+  color: var(--urgent-red);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 4px;
+  line-height: 1;
+}
+
+.multi-cube-controls {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.multi-cube-control-col {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.multi-cube-control-col label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-muted);
+}
+
+.multi-summary-box {
+  background: linear-gradient(135deg, rgba(255, 112, 67, 0.08), rgba(255, 160, 122, 0.12));
+  border: 1.5px solid var(--primary-light);
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+
+.multi-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+  font-size: 0.88rem;
+}
+
+/* ==========================================================================
+   Color Palette Grid & Picker
+   ========================================================================== */
+.palette-grid {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.palette-swatch {
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.palette-swatch:active {
+  transform: scale(0.9);
+}
+
+.palette-swatch.active {
+  transform: scale(1.18);
+  border-color: var(--text-main);
+  box-shadow: 0 0 0 2px var(--bg-card);
+}
+
+.palette-custom-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding: 6px 10px;
+  background-color: var(--bg-sub);
+  border-radius: var(--radius-md);
+}
+
+.palette-color-input {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 50%;
+  cursor: pointer;
+  background: transparent;
+  padding: 0;
+}
+
+/* ==========================================================================
+   PIN View, Copy & Share
+   ========================================================================== */
+.pin-display-group {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 12px 0;
+}
+
+.pin-item {
+  background-color: var(--bg-sub);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+}
+
+.pin-item-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 6px;
+}
+
+.pin-role-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.pin-role-badge.editor {
+  background-color: var(--primary-light);
+  color: var(--primary);
+}
+
+.pin-role-badge.viewer {
+  background-color: var(--accent-ice-light);
+  color: #0288D1;
+}
+
+.pin-role-desc {
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+.pin-value-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.pin-value-display {
+  flex: 1;
+  font-family: monospace;
+  font-size: 1.15rem;
+  font-weight: 700;
+  letter-spacing: 3px;
+  padding: 6px 10px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  color: var(--text-main);
+}
+

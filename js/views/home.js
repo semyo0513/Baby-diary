@@ -175,6 +175,36 @@ export function renderHomeView(container) {
     emptyNotice.textContent = '오늘 아직 이유식 기록이 없습니다.';
     mealCard.appendChild(emptyNotice);
   } else {
+    // 오늘 총 섭취량 및 준비량 요약 바
+    const totalEaten = todayMeals.reduce((acc, m) => acc + (parseFloat(m.grams) || 0), 0);
+    const totalPrep = todayMeals.reduce((acc, m) => acc + (parseFloat(m.prepared_grams) || parseFloat(m.grams) || 0), 0);
+
+    const summaryBar = document.createElement('div');
+    summaryBar.style.display = 'flex';
+    summaryBar.style.alignItems = 'center';
+    summaryBar.style.justifyContent = 'space-between';
+    summaryBar.style.padding = '8px 12px';
+    summaryBar.style.margin = '4px 0 12px 0';
+    summaryBar.style.backgroundColor = 'var(--primary-light)';
+    summaryBar.style.borderRadius = 'var(--radius-md)';
+    summaryBar.style.border = '1px solid var(--primary-border)';
+
+    const totalLabel = document.createElement('span');
+    totalLabel.style.fontSize = '0.85rem';
+    totalLabel.style.fontWeight = '600';
+    totalLabel.style.color = 'var(--text-main)';
+    totalLabel.textContent = '🍽️ 오늘 실제 섭취량';
+
+    const totalVal = document.createElement('span');
+    totalVal.style.fontSize = '1.05rem';
+    totalVal.style.fontWeight = '800';
+    totalVal.style.color = 'var(--primary)';
+    totalVal.innerHTML = `${totalEaten}g ${totalPrep > totalEaten ? `<small style="font-size:0.75rem; color:var(--text-muted); font-weight:normal;">(분출 ${totalPrep}g)</small>` : '<small style="font-size:0.75rem; color:#2E7D32;">(완밥!)</small>'}`;
+
+    summaryBar.appendChild(totalLabel);
+    summaryBar.appendChild(totalVal);
+    mealCard.appendChild(summaryBar);
+
     const mealList = document.createElement('div');
     mealList.style.display = 'flex';
     mealList.style.flexDirection = 'column';
@@ -187,13 +217,13 @@ export function renderHomeView(container) {
       row.style.display = 'flex';
       row.style.alignItems = 'center';
       row.style.justifyContent = 'space-between';
-      row.style.padding = '6px 0';
+      row.style.padding = '8px 0';
       row.style.borderBottom = '1px solid var(--border-light)';
 
       const left = document.createElement('div');
       left.style.display = 'flex';
       left.style.alignItems = 'center';
-      left.style.gap = '8px';
+      left.style.gap = '10px';
       left.style.cursor = 'pointer';
       left.onclick = () => {
         openEntrySheet(today, m.meal_no || 1, m);
@@ -202,28 +232,55 @@ export function renderHomeView(container) {
       const dot = document.createElement('span');
       dot.className = 'chip-dot';
       dot.style.backgroundColor = ing ? ing.color : '#4DB6AC';
+      dot.style.width = '10px';
+      dot.style.height = '10px';
+
+      const infoCol = document.createElement('div');
+      infoCol.style.display = 'flex';
+      infoCol.style.flexDirection = 'column';
+      infoCol.style.gap = '2px';
+
+      const nameRow = document.createElement('div');
+      nameRow.style.display = 'flex';
+      nameRow.style.alignItems = 'center';
+      nameRow.style.gap = '8px';
 
       const name = document.createElement('span');
-      name.style.fontWeight = '600';
+      name.style.fontWeight = '700';
+      name.style.fontSize = '0.92rem';
       name.textContent = `${m.meal_no || 1}끼 ${m.name}`;
 
-      const grams = document.createElement('span');
-      grams.style.fontSize = '0.85rem';
-      grams.style.color = 'var(--text-muted)';
+      const eatenSpan = document.createElement('span');
+      eatenSpan.style.fontWeight = '800';
+      eatenSpan.style.fontSize = '0.92rem';
+      eatenSpan.style.color = 'var(--primary)';
+      eatenSpan.textContent = `실제 섭취 ${m.grams}g`;
+
+      nameRow.appendChild(name);
+      nameRow.appendChild(eatenSpan);
+      infoCol.appendChild(nameRow);
+
+      const subInfo = document.createElement('div');
+      subInfo.style.fontSize = '0.78rem';
+      subInfo.style.color = 'var(--text-muted)';
       const isCube = String(m.use_cube).toUpperCase() !== 'FALSE';
-      let infoStr = `${m.grams}g`;
       if (isCube) {
-        if (m.prepared_grams && parseFloat(m.prepared_grams) !== parseFloat(m.grams)) {
-          infoStr += ` (분출 ${m.prepared_grams}g / ${m.cubes_used}큐브)`;
+        const prep = m.prepared_grams !== undefined ? parseFloat(m.prepared_grams) : parseFloat(m.grams);
+        const actual = parseFloat(m.grams);
+        const cubes = m.cubes_used || 1;
+        if (prep > actual) {
+          subInfo.innerHTML = `🧊 분출 ${prep}g (${cubes}큐브) 중 <strong>${prep - actual}g 남김</strong>`;
+          subInfo.style.color = '#E65100';
         } else {
-          infoStr += ` (${m.cubes_used || 1}큐브)`;
+          subInfo.innerHTML = `🧊 분출 ${prep}g (${cubes}큐브) 완밥`;
         }
+      } else {
+        subInfo.textContent = '🍳 직접 조리 / 생재료';
       }
-      grams.textContent = infoStr;
+      infoCol.appendChild(subInfo);
 
       left.appendChild(dot);
-      left.appendChild(name);
-      left.appendChild(grams);
+      left.appendChild(infoCol);
 
       // 수정 및 삭제 액션 버튼
       const right = document.createElement('div');

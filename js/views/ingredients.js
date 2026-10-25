@@ -241,38 +241,88 @@ function openIngredientEditModal(existing = null) {
   trackRow.appendChild(trackTxt);
   form.appendChild(trackRow);
 
-  // 색상 선택 팔레트
+  // 색상 선택 팔레트 (다양한 28종 이유식 컬러 + 직접 선택)
   const colorGroup = document.createElement('div');
   colorGroup.className = 'form-group';
   const colorLabel = document.createElement('label');
   colorLabel.className = 'form-label';
-  colorLabel.textContent = '재료 색상 (달력 칩 표시용)';
+  colorLabel.textContent = '재료 색상 (달력 및 식단 칩 표시용)';
   colorGroup.appendChild(colorLabel);
 
-  const colors = ['#FF8A65', '#FFA726', '#66BB6A', '#4DB6AC', '#42A5F5', '#AB47BC', '#EC407A', '#8D6E63'];
+  const colors = [
+    // 곡물/베이스 (오트밀, 쌀, 감자, 곡류)
+    '#A1887F', '#8D6E63', '#D7CCC8', '#BCAAA4',
+    // 채소/그린 (애호박, 시금치, 청경채, 브로콜리, 아보카도, 완두콩)
+    '#81C784', '#66BB6A', '#4CAF50', '#2E7D32', '#9CCC65', '#AEEA00',
+    // 육류/단백질 (소고기, 닭고기, 연어, 비트)
+    '#E57373', '#EF5350', '#D32F2F', '#C2185B', '#FF8A65', '#FF7043',
+    // 비타민/옐로우/오렌지 (당근, 단호박, 파프리카, 옥수수)
+    '#FFA726', '#FF9800', '#F57C00', '#FFB74D', '#FDD835', '#FBC02D',
+    // 특수/퍼플/베리/해조류 (자색고구마, 블루베리, 흑미, 미역, 큐브)
+    '#BA68C8', '#AB47BC', '#8E24AA', '#5C6BC0', '#4DB6AC', '#26A69A'
+  ];
   let selectedColor = existing ? existing.color : colors[0];
 
   const paletteWrap = document.createElement('div');
-  paletteWrap.style.display = 'flex';
-  paletteWrap.style.gap = '10px';
+  paletteWrap.className = 'palette-grid';
 
+  const swatches = [];
   colors.forEach(c => {
     const swatch = document.createElement('div');
-    swatch.style.width = '28px';
-    swatch.style.height = '28px';
-    swatch.style.borderRadius = '50%';
+    swatch.className = `palette-swatch ${c.toLowerCase() === selectedColor.toLowerCase() ? 'active' : ''}`;
     swatch.style.backgroundColor = c;
-    swatch.style.cursor = 'pointer';
-    swatch.style.border = c === selectedColor ? '3px solid var(--text-main)' : '2px solid transparent';
+    swatch.title = c;
     swatch.onclick = () => {
       selectedColor = c;
-      Array.from(paletteWrap.children).forEach((ch, idx) => {
-        ch.style.border = colors[idx] === selectedColor ? '3px solid var(--text-main)' : '2px solid transparent';
-      });
+      customInput.value = c;
+      previewDot.style.backgroundColor = c;
+      hexCode.textContent = c.toUpperCase();
+      swatches.forEach(s => s.classList.remove('active'));
+      swatch.classList.add('active');
     };
+    swatches.push(swatch);
     paletteWrap.appendChild(swatch);
   });
   colorGroup.appendChild(paletteWrap);
+
+  // 직접 색상 선택 커스텀 로우
+  const customRow = document.createElement('div');
+  customRow.className = 'palette-custom-row';
+
+  const customLabel = document.createElement('span');
+  customLabel.style.fontSize = '0.85rem';
+  customLabel.style.fontWeight = '600';
+  customLabel.textContent = '🎨 커스텀 색상:';
+
+  const customInput = document.createElement('input');
+  customInput.type = 'color';
+  customInput.className = 'palette-color-input';
+  customInput.value = selectedColor.startsWith('#') && selectedColor.length === 7 ? selectedColor : '#FF8A65';
+
+  const previewDot = document.createElement('span');
+  previewDot.className = 'chip-dot';
+  previewDot.style.width = '14px';
+  previewDot.style.height = '14px';
+  previewDot.style.backgroundColor = selectedColor;
+
+  const hexCode = document.createElement('span');
+  hexCode.style.fontSize = '0.8rem';
+  hexCode.style.fontFamily = 'monospace';
+  hexCode.textContent = selectedColor.toUpperCase();
+
+  customInput.oninput = () => {
+    selectedColor = customInput.value;
+    previewDot.style.backgroundColor = selectedColor;
+    hexCode.textContent = selectedColor.toUpperCase();
+    swatches.forEach(s => s.classList.remove('active'));
+  };
+
+  customRow.appendChild(customLabel);
+  customRow.appendChild(customInput);
+  customRow.appendChild(previewDot);
+  customRow.appendChild(hexCode);
+  colorGroup.appendChild(customRow);
+
   form.appendChild(colorGroup);
 
   // 저장 버튼

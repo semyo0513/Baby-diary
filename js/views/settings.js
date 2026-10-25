@@ -184,10 +184,13 @@ export function renderSettingsView(container) {
   calcCard.appendChild(form);
   container.appendChild(calcCard);
 
-  // 3. 인증 및 권한 카드
+  // 3. 인증 및 가족 공유 PIN 관리 카드
   const authCard = document.createElement('div');
   authCard.className = 'card';
-  authCard.innerHTML = `<div class="card-title">🔐 PIN 인증 및 사용자 권한</div>`;
+  authCard.innerHTML = `
+    <div class="card-title">🔐 가족 공유 및 PIN 번호 관리</div>
+    <div class="card-subtitle" style="margin-bottom: 12px;">가족, 조부모님, 베이비시터와 식단을 함께 기록하거나 조회할 수 있습니다.</div>
+  `;
 
   const authBody = document.createElement('div');
   authBody.style.fontSize = '0.9rem';
@@ -195,18 +198,235 @@ export function renderSettingsView(container) {
 
   const roleText = role === 'editor' ? '✍️ 편집자 (Editor - 수정 및 기록 가능)' : '👀 조회자 (Viewer - 읽기 전용)';
   authBody.innerHTML = `
-    <div style="margin-bottom: 8px;">현재 권한: <strong>${roleText}</strong></div>
+    <div style="margin-bottom: 10px;">현재 나의 접속 권한: <strong>${roleText}</strong></div>
   `;
 
+  const editorPin = s.pin_editor || localStorage.getItem('baby_food_editor_pin') || '123456';
+  const viewerPin = s.pin_viewer || localStorage.getItem('baby_food_viewer_pin') || '000000';
+
+  // PIN 표시 그룹
+  const pinGroup = document.createElement('div');
+  pinGroup.className = 'pin-display-group';
+
+  // 1) 편집용 PIN 항목
+  const edItem = document.createElement('div');
+  edItem.className = 'pin-item';
+
+  const edHeader = document.createElement('div');
+  edHeader.className = 'pin-item-header';
+  edHeader.innerHTML = `
+    <span class="pin-role-badge editor">✍️ 편집자 PIN</span>
+    <span class="pin-role-desc">식단 기록, 큐브 제작 및 수정 가능</span>
+  `;
+
+  const edRow = document.createElement('div');
+  edRow.className = 'pin-value-row';
+
+  const edInput = document.createElement('input');
+  edInput.type = 'text';
+  edInput.readOnly = true;
+  edInput.className = 'pin-value-display';
+  edInput.value = editorPin;
+
+  const edToggleBtn = document.createElement('button');
+  edToggleBtn.type = 'button';
+  edToggleBtn.className = 'btn btn-outline btn-sm';
+  edToggleBtn.style.padding = '4px 8px';
+  edToggleBtn.textContent = '숨김';
+  edToggleBtn.onclick = () => {
+    if (edInput.type === 'text') {
+      edInput.type = 'password';
+      edToggleBtn.textContent = '보기';
+    } else {
+      edInput.type = 'text';
+      edToggleBtn.textContent = '숨김';
+    }
+  };
+
+  const edCopyBtn = document.createElement('button');
+  edCopyBtn.type = 'button';
+  edCopyBtn.className = 'btn btn-outline btn-sm';
+  edCopyBtn.style.padding = '4px 10px';
+  edCopyBtn.textContent = '복사';
+  edCopyBtn.onclick = async () => {
+    await navigator.clipboard.writeText(editorPin);
+    showToast(`편집용 PIN (${editorPin})이 복사되었습니다!`, 'success');
+  };
+
+  edRow.appendChild(edInput);
+  edRow.appendChild(edToggleBtn);
+  edRow.appendChild(edCopyBtn);
+  edItem.appendChild(edHeader);
+  edItem.appendChild(edRow);
+  pinGroup.appendChild(edItem);
+
+  // 2) 조회용 PIN 항목
+  const viItem = document.createElement('div');
+  viItem.className = 'pin-item';
+
+  const viHeader = document.createElement('div');
+  viHeader.className = 'pin-item-header';
+  viHeader.innerHTML = `
+    <span class="pin-role-badge viewer">👀 조회자 PIN</span>
+    <span class="pin-role-desc">식단 및 캘린더 읽기 전용</span>
+  `;
+
+  const viRow = document.createElement('div');
+  viRow.className = 'pin-value-row';
+
+  const viInput = document.createElement('input');
+  viInput.type = 'text';
+  viInput.readOnly = true;
+  viInput.className = 'pin-value-display';
+  viInput.value = viewerPin;
+
+  const viToggleBtn = document.createElement('button');
+  viToggleBtn.type = 'button';
+  viToggleBtn.className = 'btn btn-outline btn-sm';
+  viToggleBtn.style.padding = '4px 8px';
+  viToggleBtn.textContent = '숨김';
+  viToggleBtn.onclick = () => {
+    if (viInput.type === 'text') {
+      viInput.type = 'password';
+      viToggleBtn.textContent = '보기';
+    } else {
+      viInput.type = 'text';
+      viToggleBtn.textContent = '숨김';
+    }
+  };
+
+  const viCopyBtn = document.createElement('button');
+  viCopyBtn.type = 'button';
+  viCopyBtn.className = 'btn btn-outline btn-sm';
+  viCopyBtn.style.padding = '4px 10px';
+  viCopyBtn.textContent = '복사';
+  viCopyBtn.onclick = async () => {
+    await navigator.clipboard.writeText(viewerPin);
+    showToast(`조회용 PIN (${viewerPin})이 복사되었습니다!`, 'success');
+  };
+
+  viRow.appendChild(viInput);
+  viRow.appendChild(viToggleBtn);
+  viRow.appendChild(viCopyBtn);
+  viItem.appendChild(viHeader);
+  viItem.appendChild(viRow);
+  pinGroup.appendChild(viItem);
+
+  authBody.appendChild(pinGroup);
+
+  // 가족 공유 버튼
+  const shareBtn = document.createElement('button');
+  shareBtn.type = 'button';
+  shareBtn.className = 'btn btn-primary btn-block';
+  shareBtn.style.marginBottom = '10px';
+  shareBtn.textContent = '🔗 가족에게 PIN 및 앱 링크 공유하기';
+  shareBtn.onclick = async () => {
+    const babyName = s.baby_name || '이은';
+    const appUrl = window.location.origin + window.location.pathname;
+    const shareText = `🍚 [${babyName}의 이유식 일기] 가족 초대 안내\n\n` +
+      `👶 아기: ${babyName}\n` +
+      `✍️ 편집자 PIN: ${editorPin} (식단 기록/수정)\n` +
+      `👀 조회자 PIN: ${viewerPin} (읽기 전용)\n\n` +
+      `🔗 바로가기: ${appUrl}`;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `${babyName}의 이유식 일기 가족 초대`,
+          text: shareText,
+          url: appUrl
+        });
+        showToast('가족에게 공유되었습니다!', 'success');
+      } catch (e) {
+        // 취소했거나 미지원 시 클립보드로 복사
+        await navigator.clipboard.writeText(shareText);
+        showToast('가족 공유 초대 문구가 클립보드에 복사되었습니다!', 'success');
+      }
+    } else {
+      await navigator.clipboard.writeText(shareText);
+      showToast('가족 공유 초대 문구가 클립보드에 복사되었습니다! 카톡 등에 붙여넣어 공유하세요.', 'success', 2500);
+    }
+  };
+  authBody.appendChild(shareBtn);
+
+  // PIN 직접 변경 섹션 (토글형)
+  const pinChangeBox = document.createElement('div');
+  pinChangeBox.style.display = 'none';
+  pinChangeBox.style.backgroundColor = 'var(--bg-card)';
+  pinChangeBox.style.border = '1px solid var(--border-color)';
+  pinChangeBox.style.borderRadius = 'var(--radius-md)';
+  pinChangeBox.style.padding = '12px';
+  pinChangeBox.style.marginBottom = '12px';
+
+  pinChangeBox.innerHTML = `
+    <div style="font-weight:700; margin-bottom:8px; font-size:0.92rem;">✏️ PIN 번호 직접 변경</div>
+    <div class="form-group" style="margin-bottom:8px;">
+      <label class="form-label" style="font-size:0.8rem;">새 편집자 PIN (숫자 4~8자리)</label>
+      <input type="text" id="new-ed-pin" class="form-input" style="height:38px; font-size:0.9rem;" value="${editorPin}">
+    </div>
+    <div class="form-group" style="margin-bottom:10px;">
+      <label class="form-label" style="font-size:0.8rem;">새 조회자 PIN (숫자 4~8자리)</label>
+      <input type="text" id="new-vi-pin" class="form-input" style="height:38px; font-size:0.9rem;" value="${viewerPin}">
+    </div>
+  `;
+
+  const pinSaveBtn = document.createElement('button');
+  pinSaveBtn.type = 'button';
+  pinSaveBtn.className = 'btn btn-primary btn-block btn-sm';
+  pinSaveBtn.textContent = '새 PIN 저장 및 시트 동기화';
+  pinSaveBtn.onclick = async () => {
+    const newEd = pinChangeBox.querySelector('#new-ed-pin').value.trim();
+    const newVi = pinChangeBox.querySelector('#new-vi-pin').value.trim();
+    if (!newEd || !newVi) {
+      showToast('PIN 번호를 입력해주세요.', 'error');
+      return;
+    }
+
+    try {
+      pinSaveBtn.disabled = true;
+      pinSaveBtn.textContent = '저장 중...';
+
+      await store.saveSettings({
+        ...s,
+        pin_editor: newEd,
+        pin_viewer: newVi
+      });
+
+      localStorage.setItem('baby_food_editor_pin', newEd);
+      localStorage.setItem('baby_food_viewer_pin', newVi);
+
+      showToast('새 PIN 번호가 저장되고 동기화되었습니다!', 'success');
+      renderSettingsView(container);
+    } catch (err) {
+      showToast('PIN 저장 오류: ' + err.message, 'error');
+    } finally {
+      pinSaveBtn.disabled = false;
+      pinSaveBtn.textContent = '새 PIN 저장 및 시트 동기화';
+    }
+  };
+  pinChangeBox.appendChild(pinSaveBtn);
+  authBody.appendChild(pinChangeBox);
+
+  // 버튼 행: PIN 변경 토글 & 다른 계정 로그인 / 로그아웃
   const authBtnRow = document.createElement('div');
   authBtnRow.style.display = 'flex';
   authBtnRow.style.gap = '8px';
-  authBtnRow.style.marginTop = '10px';
+  authBtnRow.style.marginTop = '4px';
+
+  const togglePinChangeBtn = document.createElement('button');
+  togglePinChangeBtn.type = 'button';
+  togglePinChangeBtn.className = 'btn btn-outline btn-sm';
+  togglePinChangeBtn.style.flex = '1';
+  togglePinChangeBtn.textContent = '✏️ PIN 변경';
+  togglePinChangeBtn.onclick = () => {
+    pinChangeBox.style.display = pinChangeBox.style.display === 'none' ? 'block' : 'none';
+  };
 
   const changePinBtn = document.createElement('button');
   changePinBtn.type = 'button';
   changePinBtn.className = 'btn btn-outline btn-sm';
-  changePinBtn.textContent = '다른 PIN으로 로그인';
+  changePinBtn.style.flex = '1';
+  changePinBtn.textContent = '재로그인';
   changePinBtn.onclick = () => {
     openPinModal();
   };
@@ -222,6 +442,7 @@ export function renderSettingsView(container) {
     openPinModal();
   };
 
+  authBtnRow.appendChild(togglePinChangeBtn);
   authBtnRow.appendChild(changePinBtn);
   authBtnRow.appendChild(logoutBtn);
   authBody.appendChild(authBtnRow);
