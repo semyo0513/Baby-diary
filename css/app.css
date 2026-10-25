@@ -756,14 +756,46 @@ html, body {
 .cube-badge.green { background-color: var(--safe-green-light); color: var(--safe-green); }
 
 .bundle-banner {
-  background: linear-gradient(135deg, #E1F5FE, #E0F2F1);
-  border: 1px solid #B2EBF2;
+  background: linear-gradient(135deg, #E8F5E9 0%, #E0F2F1 100%);
+  border: 1.5px solid #2E7D32;
   border-radius: var(--radius-lg);
-  padding: 12px 16px;
+  padding: 14px 16px;
   margin-bottom: 14px;
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.bundle-banner-title {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #1B5E20 !important;
+  margin-bottom: 4px;
+}
+
+.bundle-banner-item {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #2E7D32 !important;
+  line-height: 1.45;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .bundle-banner {
+    background: linear-gradient(135deg, #0D2616 0%, #082422 100%);
+    border-color: #4CAF50;
+  }
+  .bundle-banner-title {
+    color: #A5D6A7 !important;
+  }
+  .bundle-banner-item {
+    color: #E8F5E9 !important;
+  }
 }
 
 /* Form Controls */

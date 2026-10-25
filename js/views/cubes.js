@@ -32,21 +32,18 @@ export function renderCubesView(container) {
     textWrap.style.flex = '1';
 
     const bTitle = document.createElement('div');
-    bTitle.style.fontWeight = '700';
-    bTitle.style.fontSize = '0.92rem';
-    bTitle.style.color = '#00796B';
+    bTitle.className = 'bundle-banner-title';
     bTitle.textContent = '제작일 묶음 추천 (한 번에 만들기)';
 
     const bList = document.createElement('div');
-    bList.style.fontSize = '0.82rem';
-    bList.style.color = 'var(--text-main)';
     bList.style.marginTop = '4px';
 
     bundles.forEach(b => {
       const p = document.createElement('div');
+      p.className = 'bundle-banner-item';
       const dow = getDayOfWeek(b.date);
       const names = b.items.map(it => it.name).join(' + ');
-      p.textContent = `📅 ${b.date.slice(5)}(${dow}) : ${names} 함께 제작`;
+      p.innerHTML = `<span>📅</span> <strong>${b.date.slice(5)}(${dow})</strong> <span>: ${names} 함께 제작</span>`;
       bList.appendChild(p);
     });
 
