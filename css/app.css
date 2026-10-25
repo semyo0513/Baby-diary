@@ -1213,4 +1213,276 @@ html, body {
   }
 }
 
+/* ==========================================================================
+   Cube Freezing D-Day & Expiry Badges
+   ========================================================================== */
+.cube-dday-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: var(--radius-sm);
+  margin-top: 4px;
+}
+.cube-dday-badge.safe {
+  background-color: var(--safe-green-light);
+  color: #1B5E20;
+  border: 1px solid #A5D6A7;
+}
+.cube-dday-badge.warning {
+  background-color: var(--warn-orange-light);
+  color: #BF360C;
+  border: 1px solid #FFCC80;
+}
+.cube-dday-badge.danger {
+  background-color: var(--urgent-red-light);
+  color: #B71C1C;
+  border: 1px solid #EF9A9A;
+}
+.cube-dday-badge.none {
+  background-color: var(--bg-sub);
+  color: var(--text-muted);
+  border: 1px solid var(--border-color);
+}
+
+@media (prefers-color-scheme: dark) {
+  .cube-dday-badge.safe {
+    background-color: #0E2918;
+    color: #A5D6A7;
+    border-color: #2E7D32;
+  }
+  .cube-dday-badge.warning {
+    background-color: #2E1906;
+    color: #FFB74D;
+    border-color: #FF9800;
+  }
+  .cube-dday-badge.danger {
+    background-color: #2D0B0B;
+    color: #EF9A9A;
+    border-color: #D32F2F;
+  }
+}
+
+/* ==========================================================================
+   Shopping List Checklist Modal
+   ========================================================================== */
+.shopping-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 12px 0;
+  max-height: 320px;
+  overflow-y: auto;
+}
+.shopping-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  transition: all 0.15s ease;
+}
+.shopping-item.checked {
+  opacity: 0.45;
+  text-decoration: line-through;
+  background-color: var(--bg-sub);
+}
+.shopping-item-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+.shopping-item-check {
+  width: 20px;
+  height: 20px;
+  accent-color: var(--primary);
+  cursor: pointer;
+}
+.shopping-item-del {
+  background: transparent;
+  border: none;
+  color: var(--text-light);
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0 4px;
+}
+.shopping-item-del:hover {
+  color: var(--urgent-red);
+}
+.shopping-add-row {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* ==========================================================================
+   Pediatrician Medical Visit Report
+   ========================================================================== */
+.pediatrician-report {
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+.report-header-card {
+  background: linear-gradient(135deg, #E3F2FD, #EDE7F6);
+  border: 1.5px solid #90CAF9;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  margin-bottom: 14px;
+}
+.report-header-title {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: #0D47A1;
+  margin-bottom: 4px;
+}
+.report-section {
+  margin-bottom: 16px;
+}
+.report-section-title {
+  font-weight: 800;
+  font-size: 0.95rem;
+  margin-bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.report-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  border: 1px solid var(--border-color);
+  background-color: var(--bg-card);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.report-table th, .report-table td {
+  border: 1px solid var(--border-light);
+  padding: 6px 8px;
+  text-align: left;
+}
+.report-table th {
+  background-color: var(--bg-sub);
+  font-weight: 700;
+}
+.report-allergy-alert {
+  background-color: var(--urgent-red-light);
+  border: 1px solid #FFCDD2;
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+  color: #B71C1C;
+  font-weight: 700;
+  font-size: 0.85rem;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .report-header-card {
+    background: linear-gradient(135deg, #0A2239, #1D1836);
+    border-color: #1976D2;
+  }
+  .report-header-title {
+    color: #90CAF9;
+  }
+  .report-allergy-alert {
+    background-color: #2D0B0B;
+    border-color: #D32F2F;
+    color: #FFCDD2;
+  }
+}
+
+/* ==========================================================================
+   7-Day Daily Intake Trend Mini Chart
+   ========================================================================== */
+.intake-chart-card {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: 14px 16px;
+  margin-bottom: 14px;
+  box-shadow: var(--shadow-sm);
+}
+.intake-chart-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+.intake-chart-title {
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: var(--text-main);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.intake-chart-avg {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--primary);
+  background: var(--primary-light);
+  padding: 3px 8px;
+  border-radius: 4px;
+}
+.intake-chart-bars {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  height: 95px;
+  padding: 0 4px 4px 4px;
+  gap: 6px;
+  border-bottom: 1.5px solid var(--border-light);
+  margin-bottom: 6px;
+}
+.intake-bar-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  height: 100%;
+  justify-content: flex-end;
+  gap: 4px;
+}
+.intake-bar-val {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.intake-bar-fill {
+  width: 100%;
+  max-width: 26px;
+  border-radius: 4px 4px 0 0;
+  background: linear-gradient(180deg, var(--primary) 0%, #FFA07A 100%);
+  transition: height 0.3s ease;
+  min-height: 4px;
+}
+.intake-bar-col.is-today .intake-bar-fill {
+  background: linear-gradient(180deg, #D32F2F 0%, var(--primary) 100%);
+}
+.intake-bar-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--text-muted);
+}
+.intake-bar-col.is-today .intake-bar-label {
+  color: var(--primary);
+  font-weight: 800;
+}
+.intake-chart-footer {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  line-height: 1.4;
+  margin-top: 4px;
+  font-weight: 600;
+}
+
+
 

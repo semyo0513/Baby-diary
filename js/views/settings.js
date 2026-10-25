@@ -8,6 +8,7 @@ import { store } from '../store.js';
 import { getRole, clearAuth, isAuthenticated } from '../api.js';
 import { showToast } from '../ui/toast.js';
 import { openPinModal } from '../main.js';
+import { openPediatricianReportModal } from './daySheet.js';
 
 export function renderSettingsView(container) {
   while (container.firstChild) {
@@ -465,6 +466,17 @@ export function renderSettingsView(container) {
     exportMealsCsv();
   };
   exportCard.appendChild(exportBtn);
+
+  const reportBtn = document.createElement('button');
+  reportBtn.type = 'button';
+  reportBtn.className = 'btn btn-primary btn-block';
+  reportBtn.style.marginTop = '10px';
+  reportBtn.textContent = '🏥 소아과 진료용 식단 리포트 (최근 14일)';
+  reportBtn.onclick = () => {
+    openPediatricianReportModal(14);
+  };
+  exportCard.appendChild(reportBtn);
+
   container.appendChild(exportCard);
 }
 

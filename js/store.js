@@ -228,7 +228,8 @@ class Store {
       ingredient: ing,
       stock: summary.stock || 0,
       rate: rate,
-      forecast: fc
+      forecast: fc,
+      lastMade: summary.lastMade || null
     };
   }
 

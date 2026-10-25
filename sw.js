@@ -3,7 +3,7 @@
  * 앱 셸 프리캐싱 및 오프라인 구동 지원
  */
 
-const CACHE_VERSION = 'baby-food-v1.4.0';
+const CACHE_VERSION = 'baby-food-v1.5.0';
 const ASSETS_TO_CACHE = [
   './',
   './index.html',

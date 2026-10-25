@@ -5,7 +5,7 @@
  */
 
 import { store } from '../store.js';
-import { getTodayYMD, formatDaySummary, addDays } from '../dates.js';
+import { getTodayYMD, formatDaySummary, addDays, getDayOfWeek } from '../dates.js';
 import { openEntrySheet } from './entrySheet.js';
 import { openDaySheet } from './daySheet.js';
 import { showToast } from '../ui/toast.js';
@@ -363,7 +363,63 @@ export function renderHomeView(container) {
   mealCard.appendChild(quickBtnRow);
   container.appendChild(mealCard);
 
-  // 5. 오늘 일일 반응 미리보기
+  // 5. 최근 7일 섭취 추이 미니 차트 (F-22)
+  const chartDays = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = addDays(today, -i);
+    const meals = store.getMealsForDate(d);
+    const eaten = meals.reduce((sum, m) => sum + (parseFloat(m.grams) || 0), 0);
+    chartDays.push({
+      date: d,
+      dow: getDayOfWeek(d),
+      grams: eaten,
+      isToday: d === today
+    });
+  }
+
+  const maxGrams = Math.max(...chartDays.map(d => d.grams), 10);
+  const daysWithFood = chartDays.filter(d => d.grams > 0);
+  const total7Days = chartDays.reduce((sum, d) => sum + d.grams, 0);
+  const avg7Days = daysWithFood.length > 0 ? Math.round(total7Days / daysWithFood.length) : 0;
+
+  let footerMsg = '';
+  const todayGrams = chartDays[chartDays.length - 1].grams;
+  if (daysWithFood.length >= 2) {
+    if (todayGrams > 0 && todayGrams >= avg7Days) {
+      footerMsg = `✨ 오늘 섭취량(${todayGrams}g)이 7일 평균(${avg7Days}g) 이상으로 아주 잘 먹고 있어요!`;
+    } else if (todayGrams > 0) {
+      footerMsg = `🌱 최근 7일간 하루 평균 ${avg7Days}g씩 꾸준히 잘 적응해 나가고 있습니다.`;
+    } else {
+      footerMsg = `💡 최근 7일 일평균 섭취량은 ${avg7Days}g입니다.`;
+    }
+  } else {
+    footerMsg = `💡 식단 기록이 쌓이면 7일간의 섭취 성장 그래프와 일평균이 분석됩니다.`;
+  }
+
+  const chartCard = document.createElement('div');
+  chartCard.className = 'intake-chart-card';
+  chartCard.innerHTML = `
+    <div class="intake-chart-header">
+      <div class="intake-chart-title">📊 최근 7일 섭취 추이</div>
+      <div class="intake-chart-avg">7일 일평균: ${avg7Days}g</div>
+    </div>
+    <div class="intake-chart-bars">
+      ${chartDays.map(d => {
+        const hPct = d.grams > 0 ? Math.max(10, Math.round((d.grams / maxGrams) * 90)) : 4;
+        return `
+          <div class="intake-bar-col ${d.isToday ? 'is-today' : ''}">
+            <div class="intake-bar-val">${d.grams > 0 ? d.grams + 'g' : ''}</div>
+            <div class="intake-bar-fill" style="height: ${hPct}%;"></div>
+            <div class="intake-bar-label">${d.isToday ? '오늘' : d.dow}</div>
+          </div>
+        `;
+      }).join('')}
+    </div>
+    <div class="intake-chart-footer">${footerMsg}</div>
+  `;
+  container.appendChild(chartCard);
+
+  // 6. 오늘 일일 반응 미리보기
   const dayLog = store.getDayLog(today);
   if (dayLog && (dayLog.appetite || dayLog.tags || dayLog.memo)) {
     const logCard = document.createElement('div');

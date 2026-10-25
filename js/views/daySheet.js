@@ -7,7 +7,7 @@
 import { store } from '../store.js';
 import { openSheet, closeSheet } from '../ui/sheet.js';
 import { openEntrySheet } from './entrySheet.js';
-import { formatDaySummary } from '../dates.js';
+import { formatDaySummary, getTodayYMD, getDayOfWeek, addDays, diffDays } from '../dates.js';
 import { createEmojiChip, createTagChip } from '../ui/chip.js';
 import { showToast } from '../ui/toast.js';
 
@@ -259,7 +259,7 @@ export function openDaySheet(dateStr) {
   // 증상 태그 선택
   const tagRow = document.createElement('div');
   tagRow.className = 'chip-group';
-  const defaultTags = ['알레르기 없음', '변비', '설사', '발진', '구토'];
+  const defaultTags = ['알레르기 없음', '피부 발진/두드러기', '입가 붉어짐', '설사', '구토', '변비', '가려움/비빔'];
 
   function renderTags() {
     while (tagRow.firstChild) tagRow.removeChild(tagRow.firstChild);
@@ -269,7 +269,12 @@ export function openDaySheet(dateStr) {
         if (isSel) {
           currentTags = currentTags.filter(x => x !== t);
         } else {
-          currentTags.push(t);
+          if (t === '알레르기 없음') {
+            currentTags = ['알레르기 없음'];
+          } else {
+            currentTags = currentTags.filter(x => x !== '알레르기 없음');
+            currentTags.push(t);
+          }
         }
         renderTags();
         saveLog();
@@ -347,8 +352,337 @@ export function openDaySheet(dateStr) {
   };
   wrap.appendChild(shareBtn);
 
+  // 소아과 진료용 리포트 버튼
+  const reportBtn = document.createElement('button');
+  reportBtn.type = 'button';
+  reportBtn.className = 'btn btn-primary btn-block';
+  reportBtn.style.marginTop = '8px';
+  reportBtn.textContent = '📋 소아과 진료용 식단 리포트 (최근 14일)';
+  reportBtn.onclick = () => {
+    openPediatricianReportModal(14);
+  };
+  wrap.appendChild(reportBtn);
+
   openSheet({
     title: '식단 상세',
     content: wrap
   });
 }
+
+/**
+ * 소아과 진료용 식단 및 알레르기 관찰 리포트 모달 (최근 N일간 종합)
+ */
+export function openPediatricianReportModal(days = 14) {
+  const today = getTodayYMD();
+  const startDate = addDays(today, -(days - 1));
+  const state = store.getState();
+  const settings = state.settings;
+  const babyName = settings.baby_name || '이은';
+  const ingMap = store.getIngredientsMap();
+
+  // 1. 기간 내 일자별 데이터 수집
+  const dateList = [];
+  let curr = startDate;
+  while (curr <= today) {
+    dateList.push(curr);
+    curr = addDays(curr, 1);
+  }
+
+  let totalIntake = 0;
+  let recordedDaysCount = 0;
+  const allergyList = [];
+  const dailyReports = [];
+
+  // 전체 기간 중 각 재료의 첫 시도일 추적 (신규 재료 판별용)
+  const allMeals = state.meals || [];
+  const firstSeenMap = {};
+  allMeals.forEach(m => {
+    if (!firstSeenMap[m.ingredient_id] || m.date < firstSeenMap[m.ingredient_id]) {
+      firstSeenMap[m.ingredient_id] = m.date;
+    }
+  });
+
+  const periodNewIngredients = [];
+  Object.keys(firstSeenMap).forEach(id => {
+    const fDate = firstSeenMap[id];
+    if (fDate >= startDate && fDate <= today) {
+      const name = ingMap[id]?.name || id;
+      periodNewIngredients.push({ name, date: fDate });
+    }
+  });
+
+  dateList.forEach(d => {
+    const meals = store.getMealsForDate(d);
+    const dayLog = store.getDayLog(d) || {};
+    const dayEaten = meals.reduce((sum, m) => sum + (parseFloat(m.grams) || 0), 0);
+
+    let tags = [];
+    if (dayLog.tags) {
+      tags = typeof dayLog.tags === 'string' ? dayLog.tags.split(',').map(s => s.trim()).filter(Boolean) : dayLog.tags;
+    }
+
+    if (dayEaten > 0) {
+      totalIntake += dayEaten;
+      recordedDaysCount++;
+    }
+
+    // 알레르기/이상반응 여부 체크
+    const symptomTags = tags.filter(t => t !== '알레르기 없음');
+    const memo = dayLog.memo || '';
+    const hasSymptomMemo = /발진|두드러기|설사|구토|가려움|알레르기/.test(memo);
+
+    if (symptomTags.length > 0 || hasSymptomMemo) {
+      allergyList.push({
+        date: d,
+        tags: symptomTags,
+        memo: memo,
+        ingredients: [...new Set(meals.map(m => m.name))].join(', ')
+      });
+    }
+
+    if (meals.length > 0 || dayLog.appetite || tags.length > 0 || memo) {
+      dailyReports.push({
+        date: d,
+        dow: getDayOfWeek(d),
+        eatenGrams: dayEaten,
+        meals: meals,
+        appetite: dayLog.appetite || '',
+        tags: tags,
+        memo: memo
+      });
+    }
+  });
+
+  const avgIntake = recordedDaysCount > 0 ? Math.round(totalIntake / recordedDaysCount) : 0;
+
+  // 2. 모달 DOM 생성
+  const wrap = document.createElement('div');
+  wrap.className = 'pediatrician-report';
+
+  // 아기 정보 & 기간 헤더 카드
+  const headerCard = document.createElement('div');
+  headerCard.className = 'report-header-card';
+  headerCard.innerHTML = `
+    <div style="font-weight: 800; font-size: 1.05rem; margin-bottom: 4px;">🏥 [소아과 진료용] ${babyName} 식단 & 알레르기 리포트</div>
+    <div style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">
+      • 분석 기간: <strong>${startDate} ~ ${today}</strong> (최근 ${days}일간)<br>
+      • 생년월일: ${settings.birth_date || '미등록'} | 이유식 시작일: ${settings.solid_start_date || '미등록'}
+    </div>
+  `;
+  wrap.appendChild(headerCard);
+
+  // 핵심 요약 스탯 (일평균, 총 기록일, 신규재료, 이상반응)
+  const statGrid = document.createElement('div');
+  statGrid.style.display = 'grid';
+  statGrid.style.gridTemplateColumns = 'repeat(4, 1fr)';
+  statGrid.style.gap = '6px';
+  statGrid.style.margin = '10px 0 14px 0';
+
+  const stats = [
+    { label: '일평균 섭취', val: `${avgIntake}g`, color: 'var(--primary)' },
+    { label: '식단 기록일', val: `${recordedDaysCount}일`, color: 'var(--text-main)' },
+    { label: '신규 시도', val: `${periodNewIngredients.length}종`, color: '#2E7D32' },
+    { label: '주의 반응', val: `${allergyList.length}건`, color: allergyList.length > 0 ? 'var(--urgent-red)' : 'var(--text-muted)' }
+  ];
+
+  stats.forEach(st => {
+    const box = document.createElement('div');
+    box.style.background = 'var(--bg-sub)';
+    box.style.borderRadius = 'var(--radius-sm)';
+    box.style.padding = '8px 4px';
+    box.style.textAlign = 'center';
+    box.innerHTML = `
+      <div style="font-size: 0.72rem; color: var(--text-muted); font-weight: 600;">${st.label}</div>
+      <div style="font-size: 1.05rem; font-weight: 800; color: ${st.color}; margin-top: 2px;">${st.val}</div>
+    `;
+    statGrid.appendChild(box);
+  });
+  wrap.appendChild(statGrid);
+
+  // 알레르기/이상반응 경고 박스
+  if (allergyList.length > 0) {
+    const alertBox = document.createElement('div');
+    alertBox.className = 'report-allergy-alert';
+
+    const alertTitle = document.createElement('div');
+    alertTitle.className = 'report-allergy-title';
+    alertTitle.textContent = `🚨 진료 상담 필요: 특이 반응/증상 기록 (${allergyList.length}건)`;
+    alertBox.appendChild(alertTitle);
+
+    allergyList.forEach(al => {
+      const row = document.createElement('div');
+      row.style.fontSize = '0.82rem';
+      row.style.marginTop = '4px';
+      row.style.lineHeight = '1.4';
+      const tagText = al.tags.length > 0 ? `[${al.tags.join(', ')}]` : '';
+      const memoText = al.memo ? ` - ${al.memo}` : '';
+      row.innerHTML = `<strong>• ${al.date.slice(5)}</strong>: <span style="color:var(--urgent-red); font-weight:700;">${tagText}</span> (섭취: ${al.ingredients || '기록 없음'})${memoText}`;
+      alertBox.appendChild(row);
+    });
+
+    wrap.appendChild(alertBox);
+  }
+
+  // 신규 재료 박스
+  if (periodNewIngredients.length > 0) {
+    const newBox = document.createElement('div');
+    newBox.style.background = '#E8F5E9';
+    newBox.style.border = '1px solid #A5D6A7';
+    newBox.style.borderRadius = 'var(--radius-sm)';
+    newBox.style.padding = '8px 10px';
+    newBox.style.fontSize = '0.82rem';
+    newBox.style.marginBottom = '12px';
+    newBox.style.color = '#1B5E20';
+
+    const itemsStr = periodNewIngredients.map(it => `<strong>${it.name}</strong>(${it.date.slice(5)} 첫시도)`).join(', ');
+    newBox.innerHTML = `🌱 <strong>기간 내 처음 시도한 재료:</strong> ${itemsStr}`;
+    wrap.appendChild(newBox);
+  }
+
+  // 식단 상세 테이블
+  const tableTitle = document.createElement('div');
+  tableTitle.style.fontWeight = '700';
+  tableTitle.style.fontSize = '0.9rem';
+  tableTitle.style.marginBottom = '6px';
+  tableTitle.textContent = `📋 최근 ${days}일 일자별 식단 상세`;
+  wrap.appendChild(tableTitle);
+
+  const tableWrap = document.createElement('div');
+  tableWrap.style.overflowX = 'auto';
+  tableWrap.style.marginBottom = '14px';
+
+  const table = document.createElement('table');
+  table.className = 'report-table';
+  table.innerHTML = `
+    <thead>
+      <tr>
+        <th style="width: 22%;">날짜</th>
+        <th style="width: 40%;">식단 및 섭취량</th>
+        <th style="width: 20%;">반응/증상</th>
+        <th style="width: 18%;">메모</th>
+      </tr>
+    </thead>
+    <tbody>
+      ${dailyReports.reverse().map(r => {
+        const mealSummary = r.meals.map(m => `${m.name} ${m.grams}g`).join(', ') || '-';
+        const reactionStr = [r.appetite, ...r.tags].filter(Boolean).join(' ') || '-';
+        return `
+          <tr>
+            <td><strong>${r.date.slice(5)}</strong><br><small style="color:var(--text-muted);">(${r.dow})</small></td>
+            <td>
+              <div style="font-weight:700; color:var(--primary);">${r.eatenGrams}g</div>
+              <small style="color:var(--text-muted);">${mealSummary}</small>
+            </td>
+            <td>${reactionStr}</td>
+            <td><small>${r.memo || '-'}</small></td>
+          </tr>
+        `;
+      }).join('')}
+    </tbody>
+  `;
+  tableWrap.appendChild(table);
+  wrap.appendChild(tableWrap);
+
+  // 텍스트 생성 헬퍼
+  function buildReportText() {
+    const lines = [
+      `🏥 [소아과 진료용 이유식 리포트]`,
+      `• 아기: ${babyName} (${settings.birth_date ? `생년월일: ${settings.birth_date}` : ''})`,
+      `• 조회 기간: ${startDate} ~ ${today} (${days}일간)`,
+      `• 일평균 섭취량: ${avgIntake}g (총 ${recordedDaysCount}일 기록)`,
+      '--------------------------------'
+    ];
+
+    if (periodNewIngredients.length > 0) {
+      lines.push(`🌱 [기간 내 첫 시도 재료]`);
+      lines.push(periodNewIngredients.map(it => `- ${it.name} (${it.date} 첫시도)`).join('\n'));
+      lines.push('--------------------------------');
+    }
+
+    if (allergyList.length > 0) {
+      lines.push(`🚨 [특이 반응 및 알레르기 관찰 (${allergyList.length}건)]`);
+      allergyList.forEach(al => {
+        lines.push(`• ${al.date}: [${al.tags.join(', ')}] ${al.memo ? `(${al.memo})` : ''} / 섭취: ${al.ingredients}`);
+      });
+      lines.push('--------------------------------');
+    } else {
+      lines.push(`✅ [특이 이상반응 없음]`);
+      lines.push('--------------------------------');
+    }
+
+    lines.push(`📋 [일자별 식단 요약]`);
+    dailyReports.forEach(r => {
+      const mealParts = r.meals.map(m => `${m.name} ${m.grams}g`).join(', ');
+      const reactionParts = [r.appetite, ...r.tags].filter(Boolean).join(' ');
+      lines.push(`• ${r.date}(${r.dow}) [${r.eatenGrams}g]: ${mealParts} ${reactionParts ? `| 반응: ${reactionParts}` : ''} ${r.memo ? `| 메모: ${r.memo}` : ''}`);
+    });
+
+    lines.push('--------------------------------');
+    lines.push('🍚 이유식 일기에서 출력됨');
+    return lines.join('\n');
+  }
+
+  // 액션 버튼 행 (복사, 공유, 인쇄)
+  const actRow = document.createElement('div');
+  actRow.style.display = 'grid';
+  actRow.style.gridTemplateColumns = '1fr 1fr 1fr';
+  actRow.style.gap = '8px';
+  actRow.style.marginTop = '12px';
+
+  const copyBtn = document.createElement('button');
+  copyBtn.type = 'button';
+  copyBtn.className = 'btn btn-outline btn-sm';
+  copyBtn.textContent = '📋 텍스트 복사';
+  copyBtn.onclick = async () => {
+    const text = buildReportText();
+    try {
+      await navigator.clipboard.writeText(text);
+      showToast('소아과 진료용 리포트가 복사되었습니다!', 'success');
+    } catch (e) {
+      showToast(text, 'info', 4000);
+    }
+  };
+
+  const shareBtn = document.createElement('button');
+  shareBtn.type = 'button';
+  shareBtn.className = 'btn btn-primary btn-sm';
+  shareBtn.textContent = '💬 공유하기';
+  shareBtn.onclick = async () => {
+    const text = buildReportText();
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: `[소아과 리포트] ${babyName} 이유식 식단 기록`,
+          text: text
+        });
+      } catch (err) {
+        if (err.name !== 'AbortError') {
+          await navigator.clipboard.writeText(text);
+          showToast('리포트가 복사되었습니다!', 'success');
+        }
+      }
+    } else {
+      await navigator.clipboard.writeText(text);
+      showToast('리포트가 복사되었습니다! 카톡 등에 붙여넣으세요.', 'success');
+    }
+  };
+
+  const printBtn = document.createElement('button');
+  printBtn.type = 'button';
+  printBtn.className = 'btn btn-outline btn-sm';
+  printBtn.textContent = '🖨️ 인쇄/PDF';
+  printBtn.onclick = () => {
+    window.print();
+  };
+
+  actRow.appendChild(copyBtn);
+  actRow.appendChild(shareBtn);
+  actRow.appendChild(printBtn);
+  wrap.appendChild(actRow);
+
+  openSheet({
+    title: '🏥 소아과 진료용 식단 리포트',
+    content: wrap
+  });
+}
+
