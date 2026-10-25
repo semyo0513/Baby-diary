@@ -56,8 +56,7 @@ export function renderHomeView(container) {
 
   if (urgentForecasts.length > 0) {
     const alertCard = document.createElement('div');
-    alertCard.className = 'bundle-banner';
-    alertCard.style.cursor = 'pointer';
+    alertCard.className = 'alert-banner-cube';
     alertCard.onclick = () => {
       store.setTab('cubes');
     };
@@ -70,14 +69,11 @@ export function renderHomeView(container) {
     textWrap.style.flex = '1';
 
     const alertTitle = document.createElement('div');
-    alertTitle.style.fontWeight = '700';
-    alertTitle.style.fontSize = '0.92rem';
-    alertTitle.style.color = '#00796B';
+    alertTitle.className = 'alert-banner-cube-title';
     alertTitle.textContent = `제작 권장 큐브가 ${urgentForecasts.length}개 있습니다!`;
 
     const alertDesc = document.createElement('div');
-    alertDesc.style.fontSize = '0.8rem';
-    alertDesc.style.color = 'var(--text-muted)';
+    alertDesc.className = 'alert-banner-cube-desc';
     const names = urgentForecasts.map(f => `${f.ingredient.name}(${f.stock}개)`).join(', ');
     alertDesc.textContent = `${names} → 큐브 탭에서 확인`;
 
@@ -93,13 +89,10 @@ export function renderHomeView(container) {
   const newIngredients = store.getNewIngredientsList();
   if (newIngredients.length > 0) {
     const newCard = document.createElement('div');
-    newCard.className = 'card';
-    newCard.style.backgroundColor = 'var(--accent-gold-light)';
-    newCard.style.borderColor = 'var(--accent-gold)';
+    newCard.className = 'alert-banner-new';
 
     const newHeader = document.createElement('div');
-    newHeader.className = 'card-title';
-    newHeader.style.color = '#E65100';
+    newHeader.className = 'alert-banner-new-title';
     newHeader.textContent = '🆕 새 재료 적응 관찰 중';
     newCard.appendChild(newHeader);
 
@@ -107,20 +100,17 @@ export function renderHomeView(container) {
     listWrap.style.display = 'flex';
     listWrap.style.flexDirection = 'column';
     listWrap.style.gap = '6px';
-    listWrap.style.marginTop = '8px';
+    listWrap.style.marginTop = '4px';
 
     newIngredients.forEach(n => {
       const row = document.createElement('div');
-      row.style.fontSize = '0.88rem';
-      row.style.display = 'flex';
-      row.style.justifyContent = 'space-between';
+      row.className = 'alert-banner-new-item';
 
       const nameSpan = document.createElement('span');
-      nameSpan.style.fontWeight = '600';
       nameSpan.textContent = `• ${n.ingredient.name}`;
 
       const daySpan = document.createElement('span');
-      daySpan.style.color = 'var(--text-muted)';
+      daySpan.className = 'alert-banner-new-day';
       daySpan.textContent = `${n.dayNumber}일차 관찰 중 (총 ${n.watchDays}일)`;
 
       row.appendChild(nameSpan);
@@ -130,9 +120,7 @@ export function renderHomeView(container) {
 
     if (newIngredients.length >= 2) {
       const tip = document.createElement('div');
-      tip.style.fontSize = '0.78rem';
-      tip.style.color = '#E65100';
-      tip.style.marginTop = '6px';
+      tip.className = 'alert-banner-new-tip';
       tip.textContent = '💡 새 재료가 2개 이상일 때는 반응 구분이 어려울 수 있으니 컨디션을 유심히 살펴주세요.';
       listWrap.appendChild(tip);
     }

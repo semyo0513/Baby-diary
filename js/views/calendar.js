@@ -187,7 +187,7 @@ function renderGridView(container, year, month, today, settings, isInclusive, wa
     const dayMeals = store.getMealsForDate(cell.date);
     const dayTotalEaten = dayMeals.reduce((acc, m) => acc + (parseFloat(m.grams) || 0), 0);
 
-    // 1) 셀 상단: 일자 + 그날 먹은 량(g) + 아이콘(🧊, 🍳, 🆕, 🎉)
+    // 1) 셀 상단: 일자 + 아이콘(🧊, 🍳, 🆕, 🎉)
     const cellHeader = document.createElement('div');
     cellHeader.className = 'cal-cell-header';
 
@@ -195,15 +195,6 @@ function renderGridView(container, year, month, today, settings, isInclusive, wa
     dayNum.className = 'cal-day-num';
     dayNum.textContent = String(cell.day);
     cellHeader.appendChild(dayNum);
-
-    // 달력 상단에 오늘/그날 먹은 양(g) 표시
-    if (dayTotalEaten > 0) {
-      const eatenTop = document.createElement('span');
-      eatenTop.className = 'cal-eaten-top';
-      eatenTop.textContent = `${dayTotalEaten}g`;
-      eatenTop.title = `총 섭취량: ${dayTotalEaten}g`;
-      cellHeader.appendChild(eatenTop);
-    }
 
     const iconsWrap = document.createElement('div');
     iconsWrap.className = 'cal-icons';
@@ -232,11 +223,24 @@ function renderGridView(container, year, month, today, settings, isInclusive, wa
     cellHeader.appendChild(iconsWrap);
     cellEl.appendChild(cellHeader);
 
-    // 2) 셀 축약 일차 표기: 175·이7
+    // 2) 셀 메타 행: 축약 일차 표기(175·이7) + 먹은 양 배지(45g)
+    const metaRow = document.createElement('div');
+    metaRow.className = 'cal-meta-row';
+
     const subtext = document.createElement('div');
     subtext.className = 'cal-subtext';
     subtext.textContent = formatCellSubtext(cell.date, settings.birth_date, settings.solid_start_date, isInclusive);
-    cellEl.appendChild(subtext);
+    metaRow.appendChild(subtext);
+
+    if (dayTotalEaten > 0) {
+      const eatenTop = document.createElement('span');
+      eatenTop.className = 'cal-eaten-top';
+      eatenTop.textContent = `${dayTotalEaten}g`;
+      eatenTop.title = `총 섭취량: ${dayTotalEaten}g`;
+      metaRow.appendChild(eatenTop);
+    }
+
+    cellEl.appendChild(metaRow);
 
     // 3) 하단 식단 큐브 칩 (최대 2개 표시 + 추가분)
     if (dayMeals.length > 0) {

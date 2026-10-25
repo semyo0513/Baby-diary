@@ -1,7 +1,8 @@
 /**
  * entrySheet.js - 한 끼 다중 큐브 일괄 기록 및 수정 바텀 시트
  * - 한 번의 입력으로 여러 개의 큐브(재료)를 장바구니처럼 담아 한 번에 일괄 기록
- * - 각 큐브별 분출량(큐브 개수 * cube_g)과 실제 섭취량(g)을 각각 또는 전체 완밥으로 손쉽게 조절
+ * - 큐브를 섞어 먹일 때: "총 실제 섭취량" 직접 임의 수정 지원 (각 큐브 비율대로 자동 배분)
+ * - 개별 토핑으로 먹일 때: 각 큐브별 분출량 및 섭취량 개별 조절 지원
  * - 수정 모드 완벽 지원 (editItem 전달 시 해당 항목 및 끼니 편집)
  */
 
@@ -161,13 +162,18 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
   ingSection.appendChild(ingChipGroup);
   wrap.appendChild(ingSection);
 
-  // 4. 선택된 큐브 목록 컨테이너
+  // 4. 총 실제 섭취량 직접 입력 및 조절 카드 (섞어 먹일 때 핵심 기능)
+  const mixedBox = document.createElement('div');
+  mixedBox.className = 'mixed-total-box';
+  wrap.appendChild(mixedBox);
+
+  // 5. 선택된 큐브 목록 컨테이너
   const basketSection = document.createElement('div');
   basketSection.style.marginBottom = '14px';
 
   const basketTitle = document.createElement('div');
   basketTitle.className = 'form-label';
-  basketTitle.textContent = '2. 큐브별 분출량 및 실제 섭취량 설정';
+  basketTitle.textContent = '2. 큐브별 분출량 및 세부 섭취량 확인';
   basketSection.appendChild(basketTitle);
 
   const basketList = document.createElement('div');
@@ -175,12 +181,12 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
   basketSection.appendChild(basketList);
   wrap.appendChild(basketSection);
 
-  // 5. 전체 끼니 요약 및 완밥 원클릭 박스
+  // 6. 전체 끼니 요약 박스
   const summaryBox = document.createElement('div');
   summaryBox.className = 'multi-summary-box';
   wrap.appendChild(summaryBox);
 
-  // 6. 하단 저장 버튼
+  // 7. 하단 저장 버튼
   const saveBtn = document.createElement('button');
   saveBtn.type = 'button';
   saveBtn.className = 'btn btn-primary btn-block';
@@ -206,6 +212,36 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
   }
 
   // ---------------------------------------------------------------------------
+  // 핵심 로직: 총 실제 섭취량 임의 수정 시 각 큐브 비율대로 자동 배분
+  // ---------------------------------------------------------------------------
+  function applyTotalActual(newTotal) {
+    newTotal = Math.max(0, parseInt(newTotal, 10) || 0);
+    const totalPrep = selectedItems.reduce((acc, it) => acc + (it.useCube ? it.preparedGrams : it.actualGrams), 0);
+    if (totalPrep <= 0 || selectedItems.length === 0) return;
+
+    let assignedSum = 0;
+    selectedItems.forEach(it => {
+      const prep = it.useCube ? it.preparedGrams : it.actualGrams;
+      const share = Math.round((prep / totalPrep) * newTotal);
+      it.actualGrams = share;
+      assignedSum += share;
+    });
+
+    // 반올림 오차 보정 (합계가 newTotal과 1g도 틀리지 않도록 가장 큰 항목에 가감)
+    const diff = newTotal - assignedSum;
+    if (diff !== 0 && selectedItems.length > 0) {
+      let maxItem = selectedItems[0];
+      selectedItems.forEach(it => {
+        if (it.preparedGrams > maxItem.preparedGrams) maxItem = it;
+      });
+      maxItem.actualGrams = Math.max(0, maxItem.actualGrams + diff);
+    }
+
+    renderBasket();
+    renderSummary();
+  }
+
+  // ---------------------------------------------------------------------------
   // 렌더링 함수들
   // ---------------------------------------------------------------------------
 
@@ -221,10 +257,8 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
       const chip = createIngredientChip(ing, isSelected, (clickedIng) => {
         const foundIdx = selectedItems.findIndex(it => it.ingredient.id === clickedIng.id);
         if (foundIdx !== -1) {
-          // 이미 있으면 제거 (최소 1개 유지는 안 함, 사용자가 삭제 가능)
           selectedItems.splice(foundIdx, 1);
         } else {
-          // 없으면 추가
           const cubeG = parseFloat(clickedIng.cube_g) || 20;
           selectedItems.push({
             id: null,
@@ -240,6 +274,130 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
       });
       ingChipGroup.appendChild(chip);
     });
+  }
+
+  function renderMixedBox() {
+    while (mixedBox.firstChild) {
+      mixedBox.removeChild(mixedBox.firstChild);
+    }
+
+    if (selectedItems.length === 0) {
+      mixedBox.style.display = 'none';
+      return;
+    }
+    mixedBox.style.display = 'block';
+
+    const totalPrepared = selectedItems.reduce((acc, it) => acc + (it.useCube ? it.preparedGrams : it.actualGrams), 0);
+    const totalActual = selectedItems.reduce((acc, it) => acc + it.actualGrams, 0);
+
+    // 헤더
+    const mHead = document.createElement('div');
+    mHead.className = 'mixed-total-header';
+
+    const mTitle = document.createElement('div');
+    mTitle.className = 'mixed-total-title';
+    mTitle.innerHTML = `🥣 총 실제 섭취량 <span style="font-size:0.8rem; font-weight:normal; color:var(--text-muted);">(직접 입력/수정)</span>`;
+
+    const prepTag = document.createElement('span');
+    prepTag.style.fontSize = '0.78rem';
+    prepTag.style.color = 'var(--text-muted)';
+    prepTag.textContent = `총 분출 ${totalPrepared}g`;
+
+    mHead.appendChild(mTitle);
+    mHead.appendChild(prepTag);
+    mixedBox.appendChild(mHead);
+
+    // 컨트롤: [- 5g] [ 직접 입력 input ] [+ 5g] [완밥]
+    const mControls = document.createElement('div');
+    mControls.className = 'mixed-total-controls';
+
+    const minusBtn = document.createElement('button');
+    minusBtn.type = 'button';
+    minusBtn.className = 'btn btn-outline btn-sm';
+    minusBtn.style.padding = '8px 12px';
+    minusBtn.style.fontSize = '1.1rem';
+    minusBtn.style.fontWeight = 'bold';
+    minusBtn.textContent = '−5g';
+    minusBtn.onclick = () => {
+      applyTotalActual(Math.max(0, totalActual - 5));
+      renderMixedBox();
+    };
+
+    const inputWrap = document.createElement('div');
+    inputWrap.className = 'mixed-total-input-wrap';
+
+    const totalInput = document.createElement('input');
+    totalInput.type = 'number';
+    totalInput.className = 'mixed-total-input';
+    totalInput.min = '0';
+    totalInput.max = '600';
+    totalInput.step = '1';
+    totalInput.value = totalActual;
+    totalInput.onchange = () => {
+      applyTotalActual(parseInt(totalInput.value, 10) || 0);
+      renderMixedBox();
+    };
+
+    const unitSpan = document.createElement('span');
+    unitSpan.className = 'mixed-total-unit';
+    unitSpan.textContent = 'g';
+
+    inputWrap.appendChild(totalInput);
+    inputWrap.appendChild(unitSpan);
+
+    const plusBtn = document.createElement('button');
+    plusBtn.type = 'button';
+    plusBtn.className = 'btn btn-outline btn-sm';
+    plusBtn.style.padding = '8px 12px';
+    plusBtn.style.fontSize = '1.1rem';
+    plusBtn.style.fontWeight = 'bold';
+    plusBtn.textContent = '+5g';
+    plusBtn.onclick = () => {
+      applyTotalActual(totalActual + 5);
+      renderMixedBox();
+    };
+
+    mControls.appendChild(minusBtn);
+    mControls.appendChild(inputWrap);
+    mControls.appendChild(plusBtn);
+    mixedBox.appendChild(mControls);
+
+    // 퀵 버튼 바 (완밥, 0g)
+    const quickBar = document.createElement('div');
+    quickBar.style.display = 'flex';
+    quickBar.style.gap = '8px';
+    quickBar.style.marginTop = '8px';
+
+    const allBtn = document.createElement('button');
+    allBtn.type = 'button';
+    allBtn.className = `btn btn-sm ${totalActual === totalPrepared ? 'btn-primary' : 'btn-outline'}`;
+    allBtn.style.flex = '1';
+    allBtn.textContent = `✨ 전체 완밥 (${totalPrepared}g)`;
+    allBtn.onclick = () => {
+      applyTotalActual(totalPrepared);
+      renderMixedBox();
+      showToast('전체 완밥으로 맞췄습니다.', 'info', 1200);
+    };
+
+    const zeroBtn = document.createElement('button');
+    zeroBtn.type = 'button';
+    zeroBtn.className = `btn btn-outline btn-sm ${totalActual === 0 ? 'btn-primary' : ''}`;
+    zeroBtn.style.color = totalActual === 0 ? '#FFFFFF' : 'var(--urgent-red)';
+    zeroBtn.textContent = '0g (남김)';
+    zeroBtn.onclick = () => {
+      applyTotalActual(0);
+      renderMixedBox();
+    };
+
+    quickBar.appendChild(allBtn);
+    quickBar.appendChild(zeroBtn);
+    mixedBox.appendChild(quickBar);
+
+    // 안내 문구
+    const mHint = document.createElement('div');
+    mHint.className = 'mixed-total-hint';
+    mHint.innerHTML = `💡 <strong>섞어 먹일 때</strong> 총 먹은 양을 입력하시면 각 큐브 비율에 맞춰 실제 섭취량이 자동 배분됩니다.`;
+    mixedBox.appendChild(mHint);
   }
 
   function renderBasket() {
@@ -311,7 +469,7 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
       col1.className = 'multi-cube-control-col';
 
       const l1 = document.createElement('label');
-      l1.textContent = `🧊 분출 큐브 (${item.preparedGrams}g)`;
+      l1.textContent = `🧊 분출 (${item.preparedGrams}g)`;
       col1.appendChild(l1);
 
       const stepper1 = createStepper({
@@ -323,10 +481,10 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
         onChange: (val) => {
           item.cubesCount = val;
           item.preparedGrams = Math.round(val * item.cubeG);
-          // 실제 먹은 양도 자동 완밥으로 연동
           item.actualGrams = item.preparedGrams;
           renderBasket();
           renderSummary();
+          renderMixedBox();
         }
       });
       col1.appendChild(stepper1);
@@ -339,7 +497,7 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
       const l2 = document.createElement('label');
       l2.style.display = 'flex';
       l2.style.justifyContent = 'space-between';
-      l2.innerHTML = `<span>🍽️ 실제 먹은 양</span> <strong style="color:var(--primary);">${item.actualGrams}g</strong>`;
+      l2.innerHTML = `<span>🍽️ 먹은 양</span> <strong style="color:var(--primary); font-size:0.92rem;">${item.actualGrams}g</strong>`;
       col2.appendChild(l2);
 
       const stepper2 = createStepper({
@@ -351,6 +509,7 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
         onChange: (val) => {
           item.actualGrams = val;
           renderSummary();
+          renderMixedBox();
         }
       });
       col2.appendChild(stepper2);
@@ -378,6 +537,7 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
       check.onchange = () => {
         item.useCube = check.checked;
         renderSummary();
+        renderMixedBox();
       };
       cubeToggle.appendChild(check);
       cubeToggle.appendChild(document.createTextNode('재고 차감'));
@@ -392,6 +552,7 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
         item.actualGrams = item.preparedGrams;
         renderBasket();
         renderSummary();
+        renderMixedBox();
       };
       subRow.appendChild(quickAllBtn);
 
@@ -453,25 +614,9 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
       statusLine.textContent = `💡 분출량(${totalPrepared}g)보다 많은 ${totalActual}g 섭취`;
     }
 
-    // 전체 완밥 일괄 적용 버튼
-    const allFullBtn = document.createElement('button');
-    allFullBtn.type = 'button';
-    allFullBtn.className = 'btn btn-outline btn-block btn-sm';
-    allFullBtn.style.marginTop = '10px';
-    allFullBtn.textContent = '✨ 전체 한 번에 완밥으로 맞추기';
-    allFullBtn.onclick = () => {
-      selectedItems.forEach(it => {
-        it.actualGrams = it.preparedGrams;
-      });
-      renderBasket();
-      renderSummary();
-      showToast('모든 큐브를 완밥(분출량)으로 맞췄습니다.', 'success', 1500);
-    };
-
     summaryBox.appendChild(row1);
     summaryBox.appendChild(row2);
     summaryBox.appendChild(statusLine);
-    summaryBox.appendChild(allFullBtn);
 
     saveBtn.textContent = isEdit
       ? `${mealNo}끼 수정사항 저장하기 (${totalActual}g)`
@@ -480,6 +625,7 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
 
   function renderAll() {
     renderIngChips();
+    renderMixedBox();
     renderBasket();
     renderSummary();
   }
@@ -501,8 +647,6 @@ export function openEntrySheet(initialDate = null, initialMealNo = 1, editItem =
     try {
       const currentDayMeals = store.getMealsForDate(date);
 
-      // 수정 모드인 경우 해당 editItem 제거 후 새 아이템들로 대체
-      // 신규 입력인 경우 기존 끼니 항목 유지 또는 덮어쓰기
       const targetItemId = editItem ? editItem.id : null;
       const otherItems = targetItemId
         ? currentDayMeals.filter(m => m.id !== targetItemId)
